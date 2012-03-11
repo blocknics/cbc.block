@@ -9,7 +9,7 @@ import time as timer
 class BoxBoundary(object):
     def __init__(self, mesh):
         c = mesh.coordinates()
-        self.c_min, self.c_max = c.min(0), c.max(0)
+        self.c_min, self.c_max = map(d.MPI.min, c.min(0)), map(d.MPI.max, c.max(0))
         dim = len(self.c_min)
 
         sd = self._compile(west  = self._boundary(0, self.c_min) if dim>1 else '0',
@@ -34,10 +34,16 @@ class BoxBoundary(object):
                 .format(idx=idx, min=self.c_min[idx], max=self.c_max[idx])
 
     def _compile(self, **kwargs):
-        # The same ordering of keys() and values() is guaranteed.
-        names = kwargs.keys()
-        compiled = map(d.compile_subdomains, kwargs.values())
-        return [(names[i],compiled[i]) for i in range(len(names))]
+        # Make sure all expressions sent to compile_subdomains are different
+        expr_to_code = {}
+        for expr in kwargs.values():
+            expr_to_code[expr] = None
+
+        compiled = d.compile_subdomains(expr_to_code.keys())
+        for i, expr in enumerate(expr_to_code.keys()):
+            expr_to_code[expr] = compiled[i]
+
+        return [(name, expr_to_code[expr]) for name, expr in kwargs.items()]
 
 class update():
     """Plot and save given functional(s). Example:
