@@ -1,4 +1,4 @@
-from future import __division__
+from __future__ import division
 
 """Demo showing the use of the Moore-Penrose pseudoinverse to solve non-square
 systems of equations (finding the least squares solution for an overspecified
