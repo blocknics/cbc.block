@@ -40,6 +40,15 @@ class block_base(object):
         from block_compose import block_sub
         return block_sub(other, self)
 
+    def __pow__(self, other):
+        p = int(other)
+        if p != other or p < 0:
+            raise ValueError("power must be a positive integer")
+        if p == 0:
+            return 1
+        if p == 1:
+            return self
+        return self * pow(self, other-1)
 
 class block_container(block_base):
     """Base class for block containers: block_mat and block_vec.
