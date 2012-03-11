@@ -28,5 +28,6 @@ AA = block_mat([[A, A],
 bb = block_vec([b, b])
 
 xx = AA*bb
+assert abs(xx.norm() - 3.68e-4) < 1e-6
 
 print xx

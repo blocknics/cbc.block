@@ -47,8 +47,8 @@ def inner(u,v):
 
 def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, maxit=500,  rit_=1):
     """
-    precondMinRes(B,A,x,b): Solve Ax = b with the preconditioned biconjugate
-    gradient stabilized method.
+    precondMinRes(B,A,x,b): Solve Ax = b with the preconditioned minimum
+    residual method.
 
     @param B: Preconditioner supporting the __mul__ operator for operating on
     x. B must be symmetric positive definite

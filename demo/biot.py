@@ -146,7 +146,11 @@ AApre = block_mat([[Ap, 0],
                    [0, -Sp]])
 
 
-AAinv = SymmLQ(AA, precond=AApre, show=2, tolerance=1e-10)
+# Note: The preconditioner is indefinite, so this is a bit iffy. Most of the
+# time MinRes works fine, but occasionally it fails -- fall back on the slower
+# BiCGStab in those cases.
+AAinv = MinRes(AA, precond=AApre, show=2, tolerance=1e-10)
+AAinv_fallback = BiCGStab(AA, precond=AApre, show=2, tolerance=1e-10)
 
 # An alternative could be to use an exact block decomposition of AAinv, like
 # the following. Since the AApre we define is exact, it can be solved using
@@ -174,6 +178,7 @@ AAinv = SymmLQ(AA, precond=AApre, show=2, tolerance=1e-10)
 # Time loop
 
 t = 0.0
+x = None
 while t <= T:
     print "Time step %f" % t
 
@@ -183,7 +188,10 @@ while t <= T:
     bb[1] = assemble(L1)
     bcs.apply(bb)
 
-    x = AAinv * bb
+    try:
+        x = AAinv * bb
+    except ValueError:
+        x = AAinv_fallback(initial_guess=x) * bb
 
     U,P = x
     u = Function(V, U)
@@ -199,5 +207,5 @@ while t <= T:
     p_prev.vector()[:] = P
     t += float(dt)
 
-interactive()
+#interactive()
 print "Finished normally"

@@ -74,6 +74,20 @@ class iterative(block_base):
                 % (self.name, msg, self.iterations, time()-T, self.residuals[-1], (self.A*x-b).norm('l2')))
         return x
 
+    def __call__(self, initial_guess=None, precond=None, tolerance=None, iter=None, maxiter=None,
+                 name=None, show=None):
+        """Allow changing the parameters within an expression, e.g. x = Ainv(initial_guess=x) * b"""
+        if precond       is not None: self.B = precond
+        if initial_guess is not None: self.initial_guess = initial_guess
+        if show          is not None: self.show = show
+        if name          is not None: self.name = name
+        if tolerance     is not None: self.tolerance = tolerance
+        if maxiter       is not None: self.maxiter = maxiter
+        if iter is not None:
+            self.tolerance = 0
+            self.maxiter = iter
+        return self
+
     @property
     def iterations(self):
         return len(self.residuals)-1
