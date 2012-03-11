@@ -168,6 +168,9 @@ class block_transpose(block_base):
     def transpmult(self, x):
         return self.A.__mul__(x)
 
+    def create_vec(self, dim=1):
+        return self.A.create_vec(1-dim)
+
     def block_collapse(self):
         """See block_transform.block_collapse."""
         from block_transform import block_collapse, block_simplify
