@@ -30,12 +30,15 @@ class MinRes2(iterative):
     import minres2
     method = staticmethod(minres2.minres)
 
-
-
 class LGMRES(iterative):
     import lgmres
     __doc__ = lgmres.lgmres.__doc__
-    method = staticmethod(lgmres.lgmres)
+    def __init__(self, *args, **kwargs):
+        iterative.__init__(self, *args, **kwargs)
+        self.outer_v = kwargs.get('outer_v', [])
+    def method(self, B, A, x, b, **kwargs):
+        kwargs.setdefault('outer_v', self.outer_v)
+        return lgmres.lgmres(B, A, x, b, **kwargs)
 
 class Richardson(iterative):
     import richardson
