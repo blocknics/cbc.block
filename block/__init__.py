@@ -69,8 +69,14 @@ def _init():
 
     # For the Trilinos stuff, it's much nicer if down_cast is a method on the
     # object.
-    dolfin.GenericMatrix.down_cast = dolfin.down_cast
-    dolfin.GenericVector.down_cast = dolfin.down_cast
+    if hasattr(dolfin, 'down_cast'):
+        # DOLFIN 1.0 and before Sept-2012
+        dolfin.GenericMatrix.down_cast = dolfin.down_cast
+        dolfin.GenericVector.down_cast = dolfin.down_cast
+    else:
+        # Newer DOLFIN
+        dolfin.GenericMatrix.down_cast = dolfin.as_backend_type
+        dolfin.GenericVector.down_cast = dolfin.as_backend_type
 
     # Make sure PyTrilinos is imported somewhere, otherwise the types from
     # e.g. GenericMatrix.down_cast aren't recognised (if using Epetra backend).
