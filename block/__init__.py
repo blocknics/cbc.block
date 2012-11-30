@@ -14,7 +14,7 @@ needed. This should eventually be moved to Dolfin proper.
 from block_mat import block_mat
 from block_vec import block_vec
 from block_compose import block_mul, block_add, block_sub, block_transpose
-from block_transform import block_kronecker, block_simplify, block_collapse
+from block_transform import block_kronecker, block_simplify, block_collapse, block_left_kronecker, block_right_kronecker
 from block_bc import block_bc
 
 def _init():

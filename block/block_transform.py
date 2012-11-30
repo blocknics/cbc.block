@@ -8,15 +8,25 @@ def block_kronecker(A, B):
     operators. However, it also means that A and B must be square since
     otherwise the identities Ia and Ib are not defined.
 
-    Note: If none of the parameters are of type block_mat, the composition A*B
-    is returned instead of two block matrices.
+    Note: If none of the parameters are of type block_mat, A will be converted
+    (expanded) to a block matrix. If that 
 
     To form the Kronecker sum, you can extract (A x Ib) and (Ia x B) like this:
       C,D = block_kronecker(A,B); sum=C+D
     Similarly, it may be wise to do the inverse separately:
       C,D = block_kronecker(A,B); inverse = some_invert(D)*ConjGrad(C)
     """
-    from numpy import isscalar
+    from block_util import isscalar
+    import dolfin, numpy
+
+    if not isinstance(A, block_mat) and not isinstance(B, block_mat):
+        if isinstance(A, dolfin.GenericMatrix) and A.size(0) == A.size(1):
+            A = block_mat(A.array())
+        elif isinstance(B, dolfin.GenericMatrix) and B.size(0) == B.size(1):
+            B = block_mat(B.array())
+        else:
+            print type(A), type(B)
+            raise ValueError('Could not convert any matrix to a square block matrix')
 
     if isinstance(B, block_mat):
         n = len(B.blocks)
@@ -27,9 +37,9 @@ def block_kronecker(A, B):
     if isinstance(A, block_mat):
         m = len(A.blocks)
         if isinstance(B, block_mat):
-            D = block_mat(m,m)
-            for i in range(m):
-                for j in range(m):
+            D = block_mat(n,n)
+            for i in range(n):
+                for j in range(n):
                     # A scalar can represent the scaled identity of any
                     # dimension, so no need to diagonal-expand it here. We
                     # don't do this check on the outer diagonal expansions,
@@ -44,6 +54,13 @@ def block_kronecker(A, B):
 
     return block_mul(C,D)
 
+def block_left_kronecker(A, B):
+    assert A.size(0) == A.size(1)
+    return block_kronecker(block_mat(A.array()), B)
+
+def block_right_kronecker(A, B):
+    assert B.size(0) == B.size(1)
+    return block_kronecker(A, block_mat(B.array()))
 
 def block_simplify(expr):
     """Return a simplified (if possible) representation of a block matrix or
