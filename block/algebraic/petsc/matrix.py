@@ -9,7 +9,7 @@ from block.block_base import block_base
 from petsc4py import PETSc
 
 class diag_op(block_base):
-    """Base class for diagonal Epetra operators (represented by an Epetra vector)."""
+    """Base class for diagonal PETSc operators (represented by an PETSc vector)."""
     from block.object_pool import shared_vec_pool
 
     def __init__(self, v):
@@ -59,7 +59,6 @@ class diag_op(block_base):
 
     def add(self, other, lscale=1.0, rscale=1.0):
         from block.block_util import isscalar
-        from PyTrilinos import Epetra
         try:
             if isscalar(other):
                 x = self.v.copy()
@@ -91,7 +90,7 @@ class diag_op(block_base):
         return '<%s %dx%d>'%(self.__class__.__name__,len(self.v),len(self.v))
 
 class matrix_op(block_base):
-    """Base class for Epetra operators (represented by an Epetra matrix)."""
+    """Base class for PETSc operators (represented by an PETSc matrix)."""
     from block.object_pool import vec_pool
 
     def __init__(self, M, _transposed=False):
@@ -305,7 +304,7 @@ def collapse(x):
 
     result = PETScMatrix(res.M)
 
-    # Sanity check. Cannot trust EpetraExt.Multiply always, it seems.
+    # Sanity check. 
     from block import block_vec
     v = x.create_vec()
     block_vec([v]).randomize()
