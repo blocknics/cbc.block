@@ -29,7 +29,7 @@ import os
 
 dolfin.set_log_level(15)
 if MPI.size(None) > 1:
-    print "Stokes demo does not work in parallel because of old-style XML mesh files"
+    print ("Stokes demo does not work in parallel because of old-style XML mesh files")
     exit()
 
 # Load mesh and subdomains
@@ -96,8 +96,8 @@ AAinv = MinRes(AA, precond=prec, tolerance=1e-10, maxiter=500, show=2)
 # Compute solution
 u, p = AAinv * bb
 
-print "Norm of velocity coefficient vector: %.15g" % u.norm("l2")
-print "Norm of pressure coefficient vector: %.15g" % p.norm("l2")
+print ("Norm of velocity coefficient vector: %.15g" % u.norm("l2"))
+print ("Norm of pressure coefficient vector: %.15g" % p.norm("l2"))
 
 # Plot solution
 plot(Function(V, u))

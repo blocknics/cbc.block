@@ -219,6 +219,6 @@ def symmlq(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0
     x += bstep * y
 
     if istop != 1:
-        print 'SymmLQ:',msg[istop]
+        print ('SymmLQ:',msg[istop])
 
     return x, residuals, [], []

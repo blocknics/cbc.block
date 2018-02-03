@@ -74,7 +74,7 @@ class update():
                     if mesh is not None:
                         break
                     if mesh is None:
-                        raise RuntimeError, "Unable to project expression, no suitable mesh."
+                        raise (RuntimeError, "Unable to project expression, no suitable mesh.")
 
         # Create function space
         shape = expression.shape()
@@ -85,7 +85,7 @@ class update():
         elif len(shape) == 2:
             V = TensorFunctionSpace(mesh, "CG", 1, shape=shape)
         else:
-            raise RuntimeError, "Unable to project expression, unhandled rank, shape is %s." % (shape,)
+            raise (RuntimeError, "Unable to project expression, unhandled rank, shape is %s." % (shape,))
 
         return V
 
@@ -96,7 +96,7 @@ class update():
                 if isinstance(mesh, cpp.Mesh):
                     V = FunctionSpaceBase(mesh, v.ufl_element())
                 else:
-                    raise TypeError, "expected a mesh when projecting an Expression"
+                    raise (TypeError, "expected a mesh when projecting an Expression")
             else:
                 V = self._extract_function_space(f, mesh)
         key = str(V)

@@ -8,7 +8,7 @@ from block.dolfin_util import *
 import numpy
 
 if MPI.size(None) > 1:
-    print "numpy demo does not work in parallel"
+    print ("numpy demo does not work in parallel")
     exit()
 
 # Function spaces, elements

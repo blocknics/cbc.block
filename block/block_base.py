@@ -90,7 +90,7 @@ class block_container(block_base):
     def __getitem__(self, key):
         try:
             return self.blocks[key]
-        except IndexError, e:
+        except (IndexError, e):
             raise IndexError(str(e) + ' at ' + str(key) + ' -- incompatible block structure')
     def __len__(self):
         return len(self.blocks)

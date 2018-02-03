@@ -33,7 +33,7 @@ def block_kronecker(A, B):
     if isinstance(A, block_mat):
         m,n = A.blocks.shape
         if isinstance(B, block_mat):
-            print "Note: block_kronecker with two block matrices is probably buggy"
+            print ("Note: block_kronecker with two block matrices is probably buggy")
             D = block_mat(n,n)
             for i in range(n):
                 for j in range(n):

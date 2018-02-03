@@ -102,7 +102,7 @@ class block_vec(block_container):
         for i in range(len(self)):
             try:
                 y[i] = getattr(self[i], operator)()
-            except Exception, e:
+            except (Exception, e):
                 if i==0 or not inplace:
                     raise e
                 else:

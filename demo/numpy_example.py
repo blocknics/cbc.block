@@ -57,7 +57,7 @@ Ainv = ConjGrad(A, tolerance=1e-10, show=2)
 
 y = Ainv*x
 
-print "CG converged in ", len(Ainv.residuals), " iterations "
+print ("CG converged in ", len(Ainv.residuals), " iterations ")
 
 
 

@@ -35,7 +35,7 @@ def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
         ABsABs = inner(ABs,ABs)
         sABs   = inner(ABs,s)
         if ABsABs == 0.0 or sABs == 0.0:
-            print "BiCGStab breakdown (zero inner product)"
+            print ("BiCGStab breakdown (zero inner product)")
             return x, residuals, alphas, betas
         w     = sABs/ABsABs
         x    += alpha*Bp+w*Bs
@@ -45,7 +45,7 @@ def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
         residual = sqrt(inner(r,r))
 
         if residual == 0.0:
-            print "BiCGStab breakdown (zero residual)"
+            print ("BiCGStab breakdown (zero residual)")
             return x, residuals, alphas, betas
 
         # Call user provided callback with solution
@@ -56,7 +56,7 @@ def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
 
         beta  = (rrn/rr0)*(alpha/w)
         if beta==0.0:
-            print "BiCGStab breakdown, beta=0, at iter=",iter," with residual=", residual
+            print ("BiCGStab breakdown, beta=0, at iter=",iter," with residual=", residual)
             return x, residuals, alphas, betas
         rr0   = rrn
         p     = r+beta*(p-w*ABp)

@@ -34,7 +34,7 @@ def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0
 
     if relativeconv:
         tolerance *= sqrt(beta1)
-#    print "tolerance ", tolerance, beta1, relativeconv 
+#    print ("tolerance ", tolerance, beta1, relativeconv) 
 
 
 
@@ -206,6 +206,6 @@ def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0
             break
 
     if istop != 1:
-        print 'MinRes:', msg[istop]
+        print ('MinRes:', msg[istop])
 
     return x, residuals, [], []

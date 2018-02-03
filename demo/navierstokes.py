@@ -16,7 +16,7 @@ from block.algebraic.petsc import *
 
 dolfin.set_log_level(15)
 if MPI.size(None) > 1:
-    print "Navier-Stokes demo does not work in parallel because of old-style XML mesh files"
+    print ("Navier-Stokes demo does not work in parallel because of old-style XML mesh files")
     exit()
 
 # Load mesh and subdomains

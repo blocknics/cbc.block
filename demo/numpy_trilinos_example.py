@@ -49,7 +49,7 @@ x[:] = random.random(N)
 Ainv = ConjGrad(A, precond=ML(A), tolerance=1e-10, show=3)
 
 y = Ainv*x
-print "CG/ML converged in ", len(Ainv.residuals), " iterations "
+print ("CG/ML converged in ", len(Ainv.residuals), " iterations "))
 
 
 

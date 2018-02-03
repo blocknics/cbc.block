@@ -73,7 +73,7 @@ class iterative(block_base):
                             progress=progress, callback=self.callback,
                             **self.kwargs)
             del progress # trigger final printout
-        except Exception, e:
+        except (Exception, e):
             from dolfin import warning
             warning("Error solving " + self.name)
             raise

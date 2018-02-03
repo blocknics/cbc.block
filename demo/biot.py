@@ -164,7 +164,7 @@ AAinv = BiCGStab(AA, precond=AApre, show=2, tolerance=1e-10)
 t = 0.0
 x = None
 while t <= T:
-    print "Time step %f" % t
+    print ("Time step %f" % t)
 
     topload_source.t = t
     bb = block_assemble([0, L1])
@@ -184,4 +184,4 @@ while t <= T:
     t += float(dt)
 
 interactive()
-print "Finished normally"
+print ("Finished normally")

@@ -164,9 +164,9 @@ class matrix_op(block_base):
                 xv = self*other*v
                 err = (xv-result*v).norm('l2')/(xv).norm('l2')
                 if (err > 1e-3):
-                    print '++ a :',self*other
-                    print '++ a\':',result
-                    print '++ EpetraExt.Multiply computed wrong result; ||(a-a\')x||/||ax|| = %g'%err
+                    print ('++ a :',self*other)
+                    print ('++ a\':',result)
+                    print ('++ EpetraExt.Multiply computed wrong result; ||(a-a\')x||/||ax|| = %g'%err )
 
                 return result
             else:

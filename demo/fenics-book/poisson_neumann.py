@@ -54,4 +54,4 @@ x = Ainv*b
 
 e = Ainv.eigenvalue_estimates()
 
-print "N=%d iter=%d K=%.3g" % (N, Ainv.iterations, e[-1]/e[0])
+print ("N=%d iter=%d K=%.3g" % (N, Ainv.iterations, e[-1]/e[0]))
