@@ -1,5 +1,5 @@
 from __future__ import division
-from common import *
+from .common import *
 
 def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, callback=None):
     #####

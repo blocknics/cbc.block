@@ -26,7 +26,6 @@ from block.algebraic.petsc import *
 
 import os
 
-dolfin.set_log_level(15)
 
 N = 48 
 mesh = UnitSquareMesh(N, N) 

@@ -1,6 +1,6 @@
 from __future__ import division
-from block import *
-from block_util import block_tensor, isscalar, wrap_in_list, create_vec_from
+from . import *
+from .block_util import block_tensor, isscalar, wrap_in_list, create_vec_from 
 
 def block_assemble(lhs, rhs=None, bcs=None,
                    symmetric=False, signs=None, symmetric_mod=None):
@@ -178,7 +178,7 @@ def block_symmetric_assemble(forms, bcs):
     return block_assemble(forms,bcs=bcs,symmetric=True)
 
 def _is_form(form):
-    from dolfin.cpp import Form as cpp_Form
+    from dolfin import Form as cpp_Form
     from ufl.form import Form as ufl_Form
     return isinstance(form, (cpp_Form, ufl_Form))
 

@@ -1,7 +1,7 @@
 from __future__ import division
 import dolfin
-from block_mat import block_mat
-from block_vec import block_vec
+from .block_mat import block_mat
+from .block_vec import block_vec
 import numpy
 
 class block_bc(list):
@@ -34,7 +34,7 @@ class block_bc(list):
                     if i==j:
                         if numpy.isscalar(A[i,i]):
                             # Convert to a diagonal matrix, so that the individual rows can be modified
-                            from block_assemble import _new_square_matrix
+                            from .block_assemble import _new_square_matrix
                             A[i,i] = _new_square_matrix(bc, A[i,i])
                         if self.symmetric:
                             bc.zero_columns(A[i,i], b[i], 1.0)
@@ -65,7 +65,7 @@ class block_rhs_bc(list):
         if self.A is not None:
             b.allocate(self.A)
         else:
-            from block_util import isscalar, _create_vec
+            from .block_util import isscalar, _create_vec
             for i,bcs in enumerate(self):
                 for bc in bcs:
                     if isscalar(b[i]) and b[i] == 0.0:

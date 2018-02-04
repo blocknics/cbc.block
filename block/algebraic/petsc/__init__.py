@@ -15,5 +15,5 @@ def _init():
     petsc4py.init(sys.argv)
 _init()
 
-from precond import *
-from matrix import *
+from .precond import *
+from .matrix import *

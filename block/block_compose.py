@@ -20,7 +20,7 @@ w=block_add.__mul__(M, v)
 --> w = a+b
 """
 
-from block_base import block_base
+from .block_base import block_base
 
 class block_mul(block_base):
     def __init__(self, A, B):
@@ -43,7 +43,7 @@ class block_mul(block_base):
         return x
 
     def transpmult(self, x):
-        from block_util import isscalar
+        from .block_util import isscalar
         for op in self.chain:
             if isscalar(op):
                 if op != 1:
@@ -86,9 +86,9 @@ class block_mul(block_base):
     def block_collapse(self):
         """Create a block_mat of block_muls from a block_mul of
         block_mats. See block_transform.block_collapse."""
-        from block_mat import block_mat
-        from block_util import isscalar
-        from block_transform import block_collapse, block_simplify
+        from .block_mat import block_mat
+        from .block_util import isscalar
+        from .block_transform import block_collapse, block_simplify
 
         # Reduce all composed objects
         ops = map(block_collapse, self.chain)
@@ -130,8 +130,8 @@ class block_mul(block_base):
         """Try to combine scalar terms and remove multiplicative identities,
         recursively. A fuller explanation is found in block_transform.block_simplify.
         """
-        from block_util import isscalar
-        from block_transform import block_simplify
+        from .block_util import isscalar
+        from .block_transform import block_simplify
         operators = []
         scalar = 1.0
         for op in self.chain:
@@ -173,8 +173,8 @@ class block_transpose(block_base):
 
     def block_collapse(self):
         """See block_transform.block_collapse."""
-        from block_transform import block_collapse, block_simplify
-        from block_mat import block_mat
+        from .block_transform import block_collapse, block_simplify
+        from .block_mat import block_mat
         A = block_collapse(self.A)
         if not isinstance(A, block_mat):
             return block_transpose(A)
@@ -189,8 +189,8 @@ class block_transpose(block_base):
         """Try to simplify the transpose, recursively. A fuller explanation is
         found in block_transform.block_simplify.
         """
-        from block_util import isscalar
-        from block_transform import block_simplify
+        from .block_util import isscalar
+        from .block_transform import block_simplify
         A = block_simplify(self.A)
         if isscalar(A):
             return A

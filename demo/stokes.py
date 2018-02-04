@@ -27,10 +27,9 @@ from block.algebraic.petsc import *
 
 import os
 
-dolfin.set_log_level(15)
-if MPI.size(None) > 1:
-    print ("Stokes demo does not work in parallel because of old-style XML mesh files")
-    exit()
+#if MPI.size(None) > 1:
+#    print ("Stokes demo does not work in parallel because of old-style XML mesh files")
+#    exit()
 
 # Load mesh and subdomains
 path = os.path.join(os.path.dirname(__file__), '')
@@ -47,7 +46,7 @@ noslip = Constant((0, 0))
 bc0 = DirichletBC(V, noslip, sub_domains, 0)
 
 # Inflow boundary condition for velocity
-inflow = Expression(("-sin(x[1]*pi)", "0.0"))
+inflow = Expression(("-sin(x[1]*pi)", "0.0"), degree=3)
 bc1 = DirichletBC(V, inflow, sub_domains, 1)
 
 # Boundary condition for pressure at outflow
@@ -83,7 +82,7 @@ block_bc(bcs, True).apply(AA).apply(bb)
 
 # Create preconditioners: An ML preconditioner for A, and the inverse diagonal
 # of the mass matrix for the (2,2) block.
-Ap = ML(A, nullspace=rigid_body_modes(V))
+Ap = AMG(A, nullspace=rigid_body_modes(V))
 Ip = LumpedInvDiag(I)
 
 prec = block_mat([[Ap, 0],

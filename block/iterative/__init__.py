@@ -1,42 +1,42 @@
 """A selection of iterative methods."""
 
-from iterative import iterative
+from .iterative import iterative
 
 class ConjGrad(iterative):
-    import conjgrad
+    from . import conjgrad
     method = staticmethod(conjgrad.precondconjgrad)
 
 class BiCGStab(iterative):
-    import bicgstab
+    from . import bicgstab
     method = staticmethod(bicgstab.precondBiCGStab)
 
 class CGN(iterative):
-    import cgn
+    from . import cgn
     method = staticmethod(cgn.CGN_BABA)
 
 class SymmLQ(iterative):
-    import symmlq
+    from . import symmlq
     method = staticmethod(symmlq.symmlq)
 
 class TFQMR(iterative):
-    import tfqmr
+    from . import tfqmr
     method = staticmethod(tfqmr.tfqmr)
 
 class MinRes(iterative):
-    import minres
+    from . import minres
     method = staticmethod(minres.minres)
 
 class MinRes2(iterative):
-    import minres2
+    from . import minres2
     method = staticmethod(minres2.minres)
 
 
 
 class LGMRES(iterative):
-    import lgmres
+    from . import lgmres
     __doc__ = lgmres.lgmres.__doc__
     method = staticmethod(lgmres.lgmres)
 
 class Richardson(iterative):
-    import richardson
+    from . import richardson
     method = staticmethod(richardson.richardson)

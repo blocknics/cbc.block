@@ -1,5 +1,5 @@
 from __future__ import division
-from block_base import block_container
+from .block_base import block_container
 
 class block_vec(block_container):
     """Class defining a block vector suitable for multiplication with a
@@ -9,6 +9,7 @@ class block_vec(block_container):
 
     def __init__(self, m, blocks=None):
         if hasattr(m, '__iter__'):
+            m = [x for x in m]
             blocks = m
             m = len(m)
         block_container.__init__(self, m, blocks)
@@ -21,7 +22,7 @@ class block_vec(block_container):
         layout appropriate for b (in Ax=b); if dim==1, the layout for x is
         used."""
         from dolfin import GenericVector
-        from block_mat import block_mat
+        from .block_mat import block_mat
         for i in range(len(self)):
             if isinstance(self[i], GenericVector):
                 continue
@@ -35,12 +36,13 @@ class block_vec(block_container):
                     except AttributeError:
                         pass
             else:
-                from block_util import create_vec_from
+                from .block_util import create_vec_from
                 try:
                     self[i] = create_vec_from(template[i])
                 except RuntimeError:
                     pass
             if not isinstance(self[i], GenericVector):
+                print (type(self[i]))
                 raise RuntimeError("Can't allocate vector - no usable template for block %d.\n"%i +
                                    "Consider calling something like bb.allocate([V, Q]) to initialise the block_vec.")
             self[i][:] = val or 0.0
@@ -83,7 +85,7 @@ class block_vec(block_container):
         symmetry), but if any vectors have been individually reassembled then
         it needs careful thought. It is probably better to just reassemble the
         whole block_vec using block_assemble()."""
-        from block_util import create_vec_from, wrap_in_list
+        from .block_util import create_vec_from, wrap_in_list
         from dolfin import GenericVector
         for i in range(len(self)):
             if not isinstance(self[i], GenericVector):

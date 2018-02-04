@@ -1,7 +1,7 @@
 from __future__ import division
 
 def isequal(op1, op2, eps=1e-3):
-    from block import block_vec
+    from . import block_vec
     v = op1.create_vec()
     block_vec([v]).randomize()
     xv = op1*v
@@ -13,7 +13,7 @@ def issymmetric(op):
     if hasattr(x, 'randomize'):
         x.randomize()
     else:
-        from block import block_vec
+        from . import block_vec
         block_vec([x]).randomize();
     opx = op*x
     err = (opx - op.T*x).norm('l2')/opx.norm('l2')
@@ -43,13 +43,14 @@ def copy(obj):
         try:
             return copy.deepcopy(obj)
         except TypeError:
-            from dolfin import warning
-            warning("Don't know how to make a deep copy of (%d,%d), making shallow copy"%(i,j))
+#            from dolfin import warning
+#            print ("Don't know how to make a deep copy of (%d,%d), making shallow copy"%(i,j))
+            print ("Don't know how to make a deep copy, making shallow copy")
             return copy.copy(obj)
 
 def block_tensor(obj):
     """Return either a block_vec or a block_mat, depending on the shape of the object"""
-    from block import block_mat, block_vec
+    from . import block_mat, block_vec
     import numpy
     if isinstance(obj, (block_mat, block_vec)):
         return obj

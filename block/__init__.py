@@ -11,18 +11,18 @@ In addition, methods are injected into dolfin.Matrix / dolfin.Vector as
 needed.
 """
 
-from block_mat import block_mat
-from block_vec import block_vec
-from block_compose import block_mul, block_add, block_sub, block_transpose
-from block_transform import block_kronecker, block_simplify, block_collapse
-from block_assemble import block_assemble, block_symmetric_assemble
-from block_bc import block_bc
-from block_util import issymmetric
+from .block_mat import block_mat
+from .block_vec import block_vec
+from .block_compose import block_mul, block_add, block_sub, block_transpose
+from .block_transform import block_kronecker, block_simplify, block_collapse
+from .block_assemble import block_assemble, block_symmetric_assemble
+from .block_bc import block_bc
+from .block_util import issymmetric
 
 def _init():
     import dolfin
-    from object_pool import vec_pool, store_args_ref
-    from block_base import block_container
+    from .object_pool import vec_pool, store_args_ref
+    from .block_base import block_container
 
     # To make stuff like L=C*B work when C and B are type dolfin.Matrix, we inject
     # methods into dolfin.(Generic)Matrix
@@ -33,7 +33,7 @@ def _init():
         return True
 
     def inject_matrix_method(name, meth):
-        setattr(dolfin.GenericMatrix, name, meth)
+        setattr(dolfin.Matrix, name, meth)
         setattr(dolfin.Matrix, name, meth)
 
     def inject_vector_method(name, meth):
@@ -58,7 +58,7 @@ def _init():
     inject_matrix_method('__neg__', lambda self : block_mul(-1, self))
 
     # Inject a new transpmult() method that returns the result vector (instead of output parameter)
-    old_transpmult = dolfin.GenericMatrix.transpmult
+    old_transpmult = dolfin.Matrix.transpmult
     def transpmult(self, x, y=None):
         check_type(self, x)
         if y is None:
@@ -93,16 +93,16 @@ def _init():
         inject_matrix_method('down_cast', dolfin.down_cast)
         inject_vector_method('down_cast', dolfin.down_cast)
 
-    if not hasattr(dolfin.GenericMatrix, 'init_vector'):
-        inject_matrix_method('init_vector', dolfin.GenericMatrix.resize)
+    if not hasattr(dolfin.Matrix, 'init_vector'):
+        inject_matrix_method('init_vector', dolfin.Matrix.resize)
 
     def T(self):
-        from block_compose import block_transpose
+        from .block_compose import block_transpose
         return block_transpose(self)
     inject_matrix_method('T', property(T))
 
     # Make sure PyTrilinos is imported somewhere, otherwise the types from
-    # e.g. GenericMatrix.down_cast aren't recognised (if using Epetra backend).
+    # e.g. Matrix.down_cast aren't recognised (if using Epetra backend).
     # Not tested, but assuming the same is true for the PETSc backend.
     for backend in ['PyTrilinos', 'petsc4py']:
         try:

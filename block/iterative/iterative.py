@@ -32,7 +32,7 @@ class iterative(block_base):
     def matvec(self, b):
         from time import time
         from block.block_vec import block_vec
-        from dolfin import log, info, Progress
+#        from dolfin import log, info, Progress
         TRACE = 13 # dolfin.TRACE
 
         T = time()
@@ -58,24 +58,25 @@ class iterative(block_base):
             x.zero()
 
         try:
-            log(TRACE, self.__class__.__name__+' solve of '+str(self.A))
-            if self.B != 1.0:
-                log(TRACE, 'Using preconditioner: '+str(self.B))
-            progress = Progress(self.name, self.maxiter)
+#            log(TRACE, self.__class__.__name__+' solve of '+str(self.A))
+#            if self.B != 1.0:
+#                log(TRACE, 'Using preconditioner: '+str(self.B))
+#            progress = Progress(self.name, self.maxiter)
             if self.tolerance < 0:
                 tolerance = -self.tolerance
                 relative = True
             else:
                 tolerance = self.tolerance
                 relative = False
+            progress = 0 
             x = self.method(self.B, self.AR, x, b, tolerance=tolerance,
                             relativeconv=self.relativeconv, maxiter=self.maxiter,
                             progress=progress, callback=self.callback,
                             **self.kwargs)
             del progress # trigger final printout
-        except (Exception, e):
-            from dolfin import warning
-            warning("Error solving " + self.name)
+        except Exception:
+#            from dolfin import warning
+            print("Error solving " + self.name)
             raise
         x, self.residuals, self.alphas, self.betas = x
 
@@ -87,10 +88,10 @@ class iterative(block_base):
             msg = "NOT CONV."
 
         if self.show == 1:
-            info('%s %s [iter=%2d, time=%.2fs, res=%.1e]' \
+            print('%s %s [iter=%2d, time=%.2fs, res=%.1e]' \
                 % (self.name, msg, self.iterations, time()-T, self.residuals[-1]))
         elif self.show >= 2:
-            info('%s %s [iter=%2d, time=%.2fs, res=%.1e, true res=%.1e]' \
+            print('%s %s [iter=%2d, time=%.2fs, res=%.1e, true res=%.1e]' \
                 % (self.name, msg, self.iterations, time()-T, self.residuals[-1], (self.A*x-b).norm('l2')))
         if self.show == 3:
             from dolfin import MPI

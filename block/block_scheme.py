@@ -4,10 +4,10 @@ from __future__ import division
 block_mat.scheme().
 """
 
-from block_base import block_base
+from .block_base import block_base
 
 def block_jacobi(op):
-    from block_mat import block_mat
+    from .block_mat import block_mat
     m,n = op.blocks.shape
     assert m==n
     mat = block_mat(m,n)

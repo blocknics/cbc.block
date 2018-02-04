@@ -1,5 +1,5 @@
-from block_mat import block_mat
-from block_compose import block_mul
+from .block_mat import block_mat
+from .block_compose import block_mul
 
 def block_kronecker(A, B):
     """Create the Kronecker (tensor) product of two matrices. The result is
@@ -17,7 +17,7 @@ def block_kronecker(A, B):
     Similarly, it may be wise to do the inverse separately:
       C,D = block_kronecker(A,B); inverse = some_invert(D)*ConjGrad(C)
     """
-    from block_util import isscalar
+    from .block_util import isscalar
     import dolfin
 
     if isinstance(A, dolfin.GenericMatrix) and not isinstance(B, block_mat):

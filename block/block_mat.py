@@ -1,6 +1,6 @@
 from __future__ import division
-from block_base import block_container
-from block_vec import block_vec
+from .block_base import block_container
+from .block_vec import block_vec
 
 class block_mat(block_container):
     """Block of matrices or other operators. Empty blocks doesn't need to be set
@@ -18,7 +18,7 @@ class block_mat(block_container):
 
     def matvec(self, x):
         from dolfin import GenericVector, GenericMatrix
-        from block_util import isscalar
+        from .block_util import isscalar
         import numpy
         m,n = self.blocks.shape
         y = block_vec(m)
@@ -105,7 +105,7 @@ class block_mat(block_container):
         return y
 
     def copy(self):
-        import block_util
+        from . import block_util
         m,n = self.blocks.shape
         y = block_mat(m,n)
         for i in range(m):
@@ -160,7 +160,7 @@ class block_mat(block_container):
         'reverse' and 'w' (weight) are supported, as well as 'truncated' and
         'symmetric'.
         """
-        from block_scheme import blockscheme
+        from .block_scheme import blockscheme
         if inverse is not None:
             m,n = self.blocks.shape
             mat = block_mat(m,n)
@@ -208,8 +208,8 @@ class block_mat(block_container):
         """Try to convert identities to scalars, recursively. A fuller
         explanation is found in block_transform.block_simplify.
         """
-        from block_util import isscalar
-        from block_transform import block_simplify
+        from .block_util import isscalar
+        from .block_transform import block_simplify
         m,n = self.blocks.shape
         res = block_mat(m,n)
         # Recursive call

@@ -1,5 +1,5 @@
 from __future__ import division
-from common import *
+from .common import *
 
 def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0, callback=None):
     #####

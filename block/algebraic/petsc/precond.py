@@ -33,7 +33,7 @@ class precond(block_base):
         # Merge parameters into the options database
         if parameters:
             origOptions = PETSc.Options().getAll()
-            for key,val in parameters.iteritems():
+            for key,val in iter(parameters.items()):
                 PETSc.Options().setValue(key, val)
 
         # Create preconditioner based on the options database
@@ -42,9 +42,9 @@ class precond(block_base):
 
         # Reset the options database
         if parameters:
-            for key in parameters.iterkeys():
+            for key in iter(parameters.keys()):
                 PETSc.Options().delValue(key)
-            for key,val in origOptions.iteritems():
+            for key,val in iter(origOptions.items()):
                 PETSc.Options().setValue(key, val)
 
         info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))
