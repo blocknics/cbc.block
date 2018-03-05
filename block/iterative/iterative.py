@@ -95,7 +95,7 @@ class iterative(block_base):
                 % (self.name, msg, self.iterations, time()-T, self.residuals[-1], (self.A*x-b).norm('l2')))
         if self.show == 3:
             from dolfin import MPI
-            if MPI.rank(None) == 0:
+            if MPI.rank() == 0:
                 try:
                     from matplotlib import pyplot
                     pyplot.figure('%s convergence (show=3)'%self.name)

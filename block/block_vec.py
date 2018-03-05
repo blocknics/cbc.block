@@ -120,7 +120,7 @@ class block_vec(block_container):
         y = self if inplace else block_vec(len(self))
         for i in range(len(self)):
             v = getattr(self[i], operator)(x)
-            if v == NotImplemented:
+            if isinstance(v, type(NotImplemented)):
                 if i==0 or not inplace:
                     return NotImplemented
                 else:
@@ -133,7 +133,7 @@ class block_vec(block_container):
         y = self if inplace else block_vec(len(self))
         for i in range(len(self)):
             v = getattr(self[i], operator)(x[i])
-            if v == NotImplemented:
+            if isinstance(v, type(NotImplemented)):
                 if i==0 or not inplace:
                     return NotImplemented
                 else:
@@ -167,6 +167,6 @@ class block_vec(block_container):
 
     def inner(self, x):
         y = self._map_vector_operator('inner', x)
-        if y == NotImplemented:
+        if isinstance(y, type(NotImplemented)):
             raise NotImplementedError('One or more blocks do not implement .inner()')
         return sum(y)
