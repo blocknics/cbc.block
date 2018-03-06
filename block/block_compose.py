@@ -38,7 +38,7 @@ class block_mul(block_base):
                 x = y
             else:
                 x = op * x
-            if x == NotImplemented:
+            if isinstance(x, type(NotImplemented)):
                 return NotImplemented
         return x
 
