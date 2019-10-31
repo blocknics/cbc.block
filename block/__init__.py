@@ -34,11 +34,13 @@ def _init():
 
     def inject_matrix_method(name, meth):
         setattr(dolfin.Matrix, name, meth)
-        setattr(dolfin.Matrix, name, meth)
+        setattr(dolfin.PETScMatrix, name, meth)
+
 
     def inject_vector_method(name, meth):
         setattr(dolfin.GenericVector, name, meth)
         setattr(dolfin.Vector, name, meth)
+        setattr(dolfin.PETScVector, name, meth)
 
     def wrap_mul(self, other):
         if isinstance(other, dolfin.GenericVector):
