@@ -8,3 +8,7 @@
 data/
 *.pvd
 *.vtu
+
+/build
+cbc.block.egg-info/
+
