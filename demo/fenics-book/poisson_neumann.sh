@@ -7,5 +7,5 @@
 # N=256 iter=7 K=1.19
 
 for N in 16 32 64 128 256; do
-    python poisson_neumann.py N=$N
+    python3 poisson_neumann.py N=$N
 done
