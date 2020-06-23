@@ -1,4 +1,6 @@
+from __future__ import print_function
 
+from builtins import range
 import numpy 
 
 from block import *
@@ -22,7 +24,7 @@ class numpy_op(block_base):
         if len(b) != self.M.shape[1]:
             raise RuntimeError(
                 'incompatible dimensions for %s matvec, %d != %d'%(self.__class__.__name__,self.M.shape[1],len(b)))
-        y=self.M.dot(b.array())
+        y=self.M.dot(b.get_local())
         x[:] = numpy.asarray(y)[0]
         return x
 
@@ -31,7 +33,7 @@ class numpy_op(block_base):
 
     @vec_pool
     def create_vec(self, dim=1):
-        return dolfin.Vector(None, self.M.shape[dim])
+        return dolfin.Vector(dolfin.MPI.comm_world, self.M.shape[dim])
 
     def __str__(self):
         format = '<%s %dx%d>'
@@ -49,7 +51,7 @@ for i in range(N):
 
 
 A = numpy_op(A)
-x = dolfin.Vector(None, N)
+x = dolfin.Vector(dolfin.MPI.comm_world, N)
 from numpy import random
 x[:] = random.random(N)
 
@@ -57,7 +59,7 @@ Ainv = ConjGrad(A, tolerance=1e-10, show=2)
 
 y = Ainv*x
 
-print ("CG converged in ", len(Ainv.residuals), " iterations ")
+print(("CG converged in ", len(Ainv.residuals), " iterations "))
 
 
 

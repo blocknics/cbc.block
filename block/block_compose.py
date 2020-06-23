@@ -1,5 +1,10 @@
 from __future__ import division
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import map
+from builtins import range
+from builtins import object
 """Classes that define algebraic operations on matrices by deferring the actual
 action until a vector is present. The classes are normally not used directly,
 but instead returned implicitly by mathematical notation. For example,
@@ -31,7 +36,8 @@ class block_mul(block_base):
 
     def __mul__(self, x):
         for op in reversed(self.chain):
-            from dolfin import GenericMatrix, GenericVector
+            from dolfin.cpp.la import GenericMatrix
+            from dolfin import GenericVector
             if isinstance(op, GenericMatrix) and isinstance(x, GenericVector):
                 y = op.create_vec(dim=0)
                 op.mult(x, y)
@@ -91,7 +97,7 @@ class block_mul(block_base):
         from .block_transform import block_collapse, block_simplify
 
         # Reduce all composed objects
-        ops = map(block_collapse, self.chain)
+        ops = list(map(block_collapse, self.chain))
 
         # Do the matrix multiply, blockwise. Note that we use
         # block_mul(A,B) rather than A*B to avoid any implicit calculations
@@ -222,8 +228,8 @@ class block_sub(object):
         y -= z
 
     def _action(self, x, transposed):
-        from block_mat import block_vec
-        from block_util import mult
+        from .block_mat import block_vec
+        from .block_util import mult
         from dolfin import GenericVector
         if not isinstance(x, (GenericVector, block_vec)):
             return NotImplemented
@@ -262,8 +268,8 @@ class block_sub(object):
         """Try to combine scalar terms and remove additive identities,
         recursively. A fuller explanation is found in block_transform.block_simplify.
         """
-        from block_util import isscalar
-        from block_transform import block_simplify
+        from .block_util import isscalar
+        from .block_transform import block_simplify
         A = block_simplify(self.A)
         B = block_simplify(self.B)
         if isscalar(A) and A==0:
@@ -274,9 +280,9 @@ class block_sub(object):
 
     def block_collapse(self):
         """Create a block_mat of block_adds from a block_add of block_mats. See block_transform.block_collapse."""
-        from block_mat import block_mat
-        from block_util import isscalar
-        from block_transform import block_collapse, block_simplify
+        from .block_mat import block_mat
+        from .block_util import isscalar
+        from .block_transform import block_collapse, block_simplify
 
         A = block_collapse(self.A)
         B = block_collapse(self.B)
@@ -324,8 +330,8 @@ class block_add(block_sub):
         """Try to combine scalar terms and remove additive identities,
         recursively. A fuller explanation is found in block_transform.block_simplify.
         """
-        from block_util import isscalar
-        from block_transform import block_simplify
+        from .block_util import isscalar
+        from .block_transform import block_simplify
         A = block_simplify(self.A)
         B = block_simplify(self.B)
         if isscalar(A) and A==0:

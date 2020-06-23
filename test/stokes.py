@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 import PyTrilinos
 from dolfin import *
 from block import *
@@ -72,14 +75,14 @@ class Stokes(unittest.TestCase):
 	AAi * bb
 
 	e = AAi.eigenvalue_estimates()
-	c =  sqrt(e[-1]/e[0])
+	c =  sqrt(old_div(e[-1],e[0]))
         self.assertAlmostEqual(c, 13.5086, places=2)
 
 
 if __name__ == "__main__" :
-    print ""
-    print "Testing Stokes preconditioner"
-    print "---------------------------------------------------------------------------"
+    print("")
+    print("Testing Stokes preconditioner")
+    print("---------------------------------------------------------------------------")
     unittest.main()
 
 

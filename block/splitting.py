@@ -1,3 +1,5 @@
+from builtins import map
+from builtins import range
 from ufl.corealg.map_dag import MultiFunction
 import collections
 SplitForm = collections.namedtuple("SplitForm", ["indices", "form"])
@@ -78,7 +80,7 @@ class FormSplitter(MultiFunction):
     def argument(self, o):
         from ufl import as_vector
         from ufl.constantvalue import Zero
-        from dolfin import Argument
+        from dolfin.function.argument import Argument
         from numpy import ndindex
         V = o.function_space()
         if V.num_sub_spaces() == 0:
@@ -122,20 +124,27 @@ def split_form(form):
 
 
 def _collapse_bc(bc):
-    from dolfin import DirichletBC
-    sub_space = bc.function_space()
+    from dolfin import DirichletBC, FunctionSpace, Constant
+    sub_space = FunctionSpace(bc.function_space())
 
     assert len(sub_space.component()) == 1
 
     sub_id = sub_space.component()[0]
-    sub_bc = DirichletBC(sub_space.collapse(), bc.value(), *bc.domain_args)
+    if hasattr(bc, 'domain_args'):
+        sub_bc = DirichletBC(sub_space.collapse(), bc.value(), *bc.domain_args)
+    else:
+        if hasattr(bc.value(), 'values'):
+            value = Constant(bc.value().values())
+        else:
+            value = bc.value()
+        sub_bc = DirichletBC(sub_space.collapse(), value, bc.user_sub_domain())
     return (int(sub_id), sub_bc)    
 
 
 def split_bcs(bcs, m):
     # return a list of lists of DirichletBC for use with cbc.block
     # we need the number of blocks m to ensure correct length of output list
-    collapsed_bcs = [[] for i in xrange(m)]
+    collapsed_bcs = [[] for i in range(m)]
     
     for i, bc_i in map(_collapse_bc, bcs):
         collapsed_bcs[i].append(bc_i)

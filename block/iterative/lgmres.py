@@ -1,4 +1,6 @@
 from __future__ import division
+from builtins import zip
+from builtins import range
 from .common import *
 import numpy
 
@@ -75,7 +77,7 @@ def lgmres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False,
         tolerance *= r_norm
     residuals = [r_norm]
 
-    for k_outer in xrange(maxiter):
+    for k_outer in range(maxiter):
         progress += 1
 
         # -- check stopping condition
@@ -97,7 +99,7 @@ def lgmres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False,
         ws = []
         y = None
 
-        for j in xrange(1, 1 + inner_m + len(outer_v)):
+        for j in range(1, 1 + inner_m + len(outer_v)):
             # -- Arnoldi process:
             #
             #    Build an orthonormal basis V and matrices W and H such that
@@ -182,7 +184,7 @@ def lgmres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False,
             hess  = numpy.zeros((j+1, j))
             e1    = numpy.zeros((j+1,))
             e1[0] = inner_res_0
-            for q in xrange(j):
+            for q in range(j):
                 hess[:(q+2),q] = hs[q]
 
             y, resids, rank, s = lstsq(hess, e1)

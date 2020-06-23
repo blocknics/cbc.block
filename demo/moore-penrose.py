@@ -15,7 +15,7 @@ mesh = UnitSquareMesh(64,64)
 V = FunctionSpace(mesh, "CG", 1)
 W = FunctionSpace(mesh, "CG", 2)
 
-f = Expression("sin(pi*x[0])")
+f = Expression("sin(pi*x[0])", degree=4)
 u, v = TrialFunction(V), TestFunction(V)
 s, t = TrialFunction(W), TestFunction(W)
 
@@ -43,7 +43,7 @@ b = assemble(L1)
 
 # Create pseudo-inverse operator (least squares solution)
 
-Apinv = ConjGrad(A.T*A, precond=ML(Ap)**2, show=2) * A.T
+Apinv = ConjGrad(A.T*A, precond=AMG(Ap)**2, show=2) * A.T
 
 # Solve and plot
 
@@ -61,7 +61,7 @@ b = assemble(L2)
 
 # Create pseudo-inverse operator (minimum norm solution)
 
-Apinv = A.T * ConjGrad(A*A.T, precond=ML(Ap)**2, show=2)
+Apinv = A.T * ConjGrad(A*A.T, precond=AMG(Ap)**2, show=2)
 
 # Solve and plot
 
@@ -75,5 +75,3 @@ w = A.create_vec(dim=1)
 w[:] = 0.64
 x += (1 - Apinv * A) * w
 plot(Function(V, x), title="alternate solution")
-
-interactive()

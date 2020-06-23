@@ -1,3 +1,4 @@
+from builtins import map
 from dolfin import *
 from block import *
 from block.splitting import split_form
@@ -28,8 +29,8 @@ def test_split_form():
 
     # blocked form
     V, Q = [sub_space.collapse() for sub_space in W.split()]
-    u, p = map(TrialFunction, [V, Q])
-    v, q = map(TestFunction, [V, Q])
+    u, p = list(map(TrialFunction, [V, Q]))
+    v, q = list(map(TestFunction, [V, Q]))
 
     from numpy import array
     a_blocked = array([[inner(grad(u), grad(v)) * dx, p * div(v) * dx],

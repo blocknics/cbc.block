@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from builtins import object
 def _init():
     import block.algebraic
     class active_backend(object):
@@ -15,9 +17,9 @@ def _init():
     dolfin.parameters["linear_algebra_backend"] = "Epetra"
 _init()
 
-from MLPrec import ML
-from AztecOO import AztecSolver
-from IFPACK import *
-from Epetra import *
-from Amesos import AmesosSolver, MumpsSolver
+from .MLPrec import ML
+from .AztecOO import AztecSolver
+from .IFPACK import *
+from .Epetra import *
+from .Amesos import AmesosSolver, MumpsSolver
 from block.dolfin_util import rigid_body_modes, orthogonalize

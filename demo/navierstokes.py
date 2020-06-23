@@ -4,6 +4,7 @@ NOTE: Needs work. Must define a better precond, this one doesn't work for smalle
 
 It is a modification of the Stokes demo (demo-stokes.py).
 """
+from __future__ import print_function
 
 # Scipy (in LGMRES) seems to crash unless it's loaded before PyTrilinos.
 import scipy
@@ -14,8 +15,8 @@ from block import *
 from block.iterative import *
 from block.algebraic.petsc import *
 
-dolfin.set_log_level(15)
-if MPI.size(None) > 1:
+set_log_level(15)
+if MPI.size(MPI.comm_world) > 1:
     print ("Navier-Stokes demo does not work in parallel because of old-style XML mesh files")
     exit()
 
@@ -33,7 +34,7 @@ noslip = Constant((0, 0))
 bc0 = DirichletBC(V, noslip, sub_domains, 0)
 
 # Inflow boundary condition for velocity
-inflow = Expression(("-sin(x[1]*pi)", "0.0"))
+inflow = Expression(("-sin(x[1]*pi)", "0.0"), degree=4)
 bc1 = DirichletBC(V, inflow, sub_domains, 1)
 
 # Boundary condition for pressure at outflow
@@ -68,7 +69,7 @@ bb = block_assemble([L1, 0], bcs=bcs)
 # Create preconditioners: An ILU preconditioner for A, and an ML inverse of the
 # Schur complement approximation for the (2,2) block.
 Ap = ILU(A)
-Dp = ML(collapse(C*InvDiag(A)*B))
+Dp = AMG(collapse(C*InvDiag(A)*B))
 
 prec = block_mat([[Ap, B],
                   [C, -Dp]]).scheme('sgs')
@@ -79,10 +80,9 @@ AAinv = LGMRES(AA, precond=prec, tolerance=1e-5, maxiter=50, show=2)
 # Compute solution
 u, p = AAinv * bb
 
-print "Norm of velocity coefficient vector: %.15g" % u.norm("l2")
-print "Norm of pressure coefficient vector: %.15g" % p.norm("l2")
+print("Norm of velocity coefficient vector: %.15g" % u.norm("l2"))
+print("Norm of pressure coefficient vector: %.15g" % p.norm("l2"))
 
 # Plot solution
 plot(Function(V, u))
 plot(Function(Q, p))
-interactive()

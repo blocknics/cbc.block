@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 from .block_mat import block_mat
 from .block_compose import block_mul
 
@@ -20,7 +22,7 @@ def block_kronecker(A, B):
     from .block_util import isscalar
     import dolfin
 
-    if isinstance(A, dolfin.GenericMatrix) and not isinstance(B, block_mat):
+    if isinstance(A, dolfin.cpp.la.GenericMatrix) and not isinstance(B, block_mat):
         A = block_mat(A.array())
     assert isinstance(A, block_mat) or isinstance(B, block_mat)
 

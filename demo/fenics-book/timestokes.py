@@ -22,6 +22,7 @@ the ML algebraic multigrid preconditioner for A, L, and M, and the CGN
 iterative solver in order to get eigenvalue estimates for the preconditioned
 systems.
 """
+from __future__ import print_function
 
 from dolfin import *
 from block import *
@@ -90,4 +91,4 @@ AAinv = CGN(AA, precond=prec, initial_guess=xx, tolerance=1e-11, show=0)
 x = AAinv*bb
 e = AAinv.eigenvalue_estimates()
 
-print "N=%d K=%.3g" % (N, sqrt(e[-1]/e[0]))
+print("N=%d K=%.3g" % (N, sqrt(e[-1]/e[0])))

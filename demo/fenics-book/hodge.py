@@ -25,6 +25,7 @@ collapse() method), and AMG is used for the single-block preconditioners.  The
 CGN iterative solver in order to get eigenvalue estimates for the
 preconditioned systems.
 """
+from __future__ import print_function
 
 from dolfin import *
 from block import *
@@ -90,7 +91,7 @@ e = AAinv.eigenvalue_estimates()
 K_B2AA = sqrt(e[len(e)-1]/e[0])
 
 
-print 'N=%d P1A=%.3g P2L=%.3g B1AA=%.3g   B2AA=%.3g' % (N, K_P1A, K_P2L, K_B1AA,  K_B2AA)
+print('N=%d P1A=%.3g P2L=%.3g B1AA=%.3g   B2AA=%.3g' % (N, K_P1A, K_P2L, K_B1AA,  K_B2AA))
 
 
 

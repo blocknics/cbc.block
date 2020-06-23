@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 from .common import *
 
 def symmlq(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0, callback=None):
@@ -219,6 +220,6 @@ def symmlq(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0
     x += bstep * y
 
     if istop != 1:
-        print ('SymmLQ:',msg[istop])
+        print(('SymmLQ:',msg[istop]))
 
     return x, residuals, [], []

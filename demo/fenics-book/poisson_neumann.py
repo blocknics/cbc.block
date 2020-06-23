@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 from dolfin import *
 from block.iterative import ConjGrad
 from block.algebraic.petsc import ML
@@ -41,7 +44,7 @@ L = v*f*dx + v*g*ds
 A, b = assemble_system(a,L)
 
 # remove constant from right handside
-b_mean = MPI.sum(None, sum(b.array())) / b.size()
+b_mean = old_div(MPI.sum(None, sum(b.array())), b.size())
 c = A.create_vec()
 c[:] = b_mean
 b -= c
@@ -54,4 +57,4 @@ x = Ainv*b
 
 e = Ainv.eigenvalue_estimates()
 
-print ("N=%d iter=%d K=%.3g" % (N, Ainv.iterations, e[-1]/e[0]))
+print ("N=%d iter=%d K=%.3g" % (N, Ainv.iterations, old_div(e[-1],e[0])))

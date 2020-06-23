@@ -1,4 +1,5 @@
 """Demo showing some of the basic block matrix transform functionality."""
+from __future__ import print_function
 
 from dolfin import *
 from block import *
@@ -11,38 +12,38 @@ v, u = TestFunction(V), TrialFunction(V)
 tensor = block_mat([[ 1, 0],
                     [-1, 1]])
 
-print 'Block matrix multiplication: composed object and its result'
+print('Block matrix multiplication: composed object and its result')
 I = block_simplify(block_mat([[1, 0],
                               [0, 1]]))
 B = block_transpose(tensor)*(tensor+I)
-print '\nI =',I
-print '\nB =',B
-print '\nBx=',block_collapse(B)
+print('\nI =',I)
+print('\nB =',B)
+print('\nBx=',block_collapse(B))
 
 A = assemble(inner(grad(u),grad(v))*dx)
 M = assemble(u*v*dx)
 b = assemble(v*dx)
 K = block_kronecker(A,tensor)
 
-print '\n================='
-print 'Block matrix multiplication: Kronecker product and its result'
-print '\nK =', K
-print '\nKx=', block_collapse(K)
+print('\n=================')
+print('Block matrix multiplication: Kronecker product and its result')
+print('\nK =', K)
+print('\nKx=', block_collapse(K))
 
-print '\n================='
-print 'Block matrix multiplication: Inverse of the Kronecker product.'
-print 'This can be formed by explicit inversion of the tensor and an'
-print 'iterative solver, either blockwise or on the full system.'
+print('\n=================')
+print('Block matrix multiplication: Inverse of the Kronecker product.')
+print('This can be formed by explicit inversion of the tensor and an')
+print('iterative solver, either blockwise or on the full system.')
 
 import numpy
 C,D = K
 Di  = block_mat(numpy.linalg.inv(tensor.blocks))
-print '\nKinv1=', block_kronecker(Di,ConjGrad(A))
-print '\nKinv2=', Di*ConjGrad(C)
+print('\nKinv1=', block_kronecker(Di,ConjGrad(A)))
+print('\nKinv2=', Di*ConjGrad(C))
 
-print '\n================='
-print 'Repeated solution of similar equations. This type of construct'
-print 'may turn up in the solution of inverse problems.'
+print('\n=================')
+print('Repeated solution of similar equations. This type of construct')
+print('may turn up in the solution of inverse problems.')
 
 AA  = block_mat.diag([0, M+A, -M], n=5)
 AAp = AA.scheme('gs', inverse=ConjGrad, reverse=True)

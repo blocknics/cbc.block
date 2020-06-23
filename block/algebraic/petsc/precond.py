@@ -1,5 +1,6 @@
 from __future__ import division
 
+from builtins import str
 from block.block_base import block_base
 from petsc4py import PETSc
 
@@ -33,7 +34,7 @@ class precond(block_base):
         # Merge parameters into the options database
         if parameters:
             origOptions = PETSc.Options().getAll()
-            for key,val in iter(parameters.items()):
+            for key,val in iter(list(parameters.items())):
                 PETSc.Options().setValue(key, val)
 
         # Create preconditioner based on the options database
@@ -42,9 +43,9 @@ class precond(block_base):
 
         # Reset the options database
         if parameters:
-            for key in iter(parameters.keys()):
+            for key in iter(list(parameters.keys())):
                 PETSc.Options().delValue(key)
-            for key,val in iter(origOptions.items()):
+            for key,val in iter(list(origOptions.items())):
                 PETSc.Options().setValue(key, val)
 
         info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))

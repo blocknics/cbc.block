@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 from dolfin import *
 from block import *
 from block.iterative import *
@@ -75,4 +78,4 @@ AAi * bb
 
 e = AAi.eigenvalue_estimates()
 
-print "N=%d iter=%d K=%.3g" % (N, AAinv.iterations, sqrt(e[-1]/e[0]))
+print("N=%d iter=%d K=%.3g" % (N, AAinv.iterations, sqrt(old_div(e[-1],e[0]))))

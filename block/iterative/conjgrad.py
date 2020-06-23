@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 from .common import *
 
 def precondconjgrad(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, robustresidual=False, callback=None):

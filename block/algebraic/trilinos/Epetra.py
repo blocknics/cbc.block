@@ -1,5 +1,8 @@
 from __future__ import division
+from __future__ import print_function
 
+from builtins import map
+from builtins import str
 """Module implementing algebraic operations on Epetra matrices: Diag, InvDiag
 etc, as well as the collapse() method which performs matrix addition and
 multiplication.
@@ -164,8 +167,8 @@ class matrix_op(block_base):
                 xv = self*other*v
                 err = (xv-result*v).norm('l2')/(xv).norm('l2')
                 if (err > 1e-3):
-                    print ('++ a :',self*other)
-                    print ('++ a\':',result)
+                    print(('++ a :',self*other))
+                    print(('++ a\':',result))
                     print ('++ EpetraExt.Multiply computed wrong result; ||(a-a\')x||/||ax|| = %g'%err )
 
                 return result
@@ -259,7 +262,7 @@ def _collapse(x):
     from block.block_compose import block_mul, block_add, block_sub, block_transpose
     from block.block_mat import block_mat
     from block.block_util import isscalar
-    from dolfin import GenericMatrix
+    from dolfin.cpp.la import GenericMatrix
     if isinstance(x, (matrix_op, diag_op)):
         return x
     elif isinstance(x, GenericMatrix):
@@ -269,7 +272,7 @@ def _collapse(x):
             raise NotImplementedError("collapse() for block_mat with shape != (1,1)")
         return _collapse(x[0,0])
     elif isinstance(x, block_mul):
-        factors = map(_collapse, x)
+        factors = list(map(_collapse, x))
         while len(factors) > 1:
             A = factors.pop(0)
             B = factors[0]
@@ -281,13 +284,13 @@ def _collapse(x):
 
         return factors[0]
     elif isinstance(x, block_add):
-        A,B = map(_collapse, x)
+        A,B = list(map(_collapse, x))
         if isscalar(A) and isscalar(B):
             return A+B
         else:
             return B.add(A) if isscalar(A) else A.add(B)
     elif isinstance(x, block_sub):
-        A,B = map(_collapse, x)
+        A,B = list(map(_collapse, x))
         if isscalar(A) and isscalar(B):
             return A-B
         else:

@@ -4,6 +4,7 @@ mixed-spaces, but the form is assembled in blocks instead of one
 monolithic matrix.
 
 """
+from builtins import map
 from dolfin import *
 from block import *
 from block.algebraic.petsc import *
@@ -51,7 +52,6 @@ x = Ainv * y
 
 # plotting
 V, Q = [sub_space.collapse() for sub_space in W.split()]
-u, p = map(Function, [V, Q], x)
+u, p = list(map(Function, [V, Q], x))
 plot(u)
 plot(p)
-interactive()

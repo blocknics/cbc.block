@@ -1,5 +1,6 @@
 from __future__ import division
 
+from builtins import str
 from block.block_base import block_base
 
 class IFPACK(block_base):

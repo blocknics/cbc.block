@@ -1,3 +1,4 @@
+from builtins import object
 import sys
 
 class object_pool(object):

@@ -1,5 +1,8 @@
 from __future__ import division
 
+from builtins import str
+from builtins import map
+from builtins import object
 import numpy
 
 class block_base(object):
@@ -80,7 +83,7 @@ class block_container(block_base):
         self.blocks[:] = blocks
 
         # Reset __len__ to what it was before the hack above
-        for tp in orig_len_func.keys():
+        for tp in list(orig_len_func.keys()):
             if orig_len_func[tp] is None:
                 delattr(tp, '__len__')
             else:

@@ -1,4 +1,6 @@
 from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 def isequal(op1, op2, eps=1e-3):
     from . import block_vec
@@ -57,7 +59,7 @@ def block_tensor(obj):
 
     from ufl import Form
     if isinstance(obj, Form):
-        from splitting import split_form
+        from .splitting import split_form
         obj = split_form(obj)
     blocks = numpy.array(obj)
     if len(blocks.shape) == 2:
@@ -70,7 +72,7 @@ def block_tensor(obj):
 def _create_vec(template):
     from dolfin import DirichletBC, FunctionSpace, Function
     if isinstance(template, DirichletBC):
-        V = template.function_space()
+        V = FunctionSpace(template.function_space())
     elif isinstance(template, FunctionSpace):
         V = template
     else:
