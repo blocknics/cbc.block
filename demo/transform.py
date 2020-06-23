@@ -4,14 +4,14 @@ from __future__ import print_function
 from dolfin import *
 from block import *
 from block.iterative import *
+import numpy as np
 
 mesh = UnitSquareMesh(2,2)
 V    = FunctionSpace(mesh, "CG", 1)
 v, u = TestFunction(V), TrialFunction(V)
 
-tensor = block_mat([[ 1, 0],
-                    [-1, 1]])
-
+tensor = block_mat(np.array([[ 1, 0],
+                             [-1, 1.]]))
 print('Block matrix multiplication: composed object and its result')
 I = block_simplify(block_mat([[1, 0],
                               [0, 1]]))
@@ -37,7 +37,9 @@ print('iterative solver, either blockwise or on the full system.')
 
 import numpy
 C,D = K
-Di  = block_mat(numpy.linalg.inv(tensor.blocks))
+
+Di  = block_mat(numpy.linalg.inv(np.fromiter(tensor.blocks.flatten(),
+                                             dtype=float).reshape(tensor.blocks.shape)))
 print('\nKinv1=', block_kronecker(Di,ConjGrad(A)))
 print('\nKinv2=', Di*ConjGrad(C))
 
