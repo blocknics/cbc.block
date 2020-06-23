@@ -85,7 +85,7 @@ def lgmres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False,
             break
 
         # -- inner LGMRES iteration
-        vs0 = -B*r_outer
+        vs0 = -1.*(B*r_outer)
         inner_res_0 = norm(vs0)
 
         if inner_res_0 == 0:
@@ -144,7 +144,7 @@ def lgmres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False,
                 z = vs[-1]
 
             if v_new is None:
-                v_new = B*A*z
+                v_new = B*(A*z)
             else:
                 # Note: v_new is modified in-place below. Must make a
                 # copy to ensure that the outer_v vectors are not
