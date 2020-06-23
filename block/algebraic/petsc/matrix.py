@@ -246,10 +246,10 @@ def _collapse(x):
     from block.block_compose import block_mul, block_add, block_sub, block_transpose
     from block.block_mat import block_mat
     from block.block_util import isscalar
-    from dolfin.cpp.la import GenericMatrix
+
     if isinstance(x, (matrix_op, diag_op)):
         return x
-    elif isinstance(x, GenericMatrix):
+    elif isinstance(x, Matrix):
         return matrix_op(x.down_cast().mat())
     elif isinstance(x, block_mat):
         if x.blocks.shape != (1,1):

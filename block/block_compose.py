@@ -36,9 +36,8 @@ class block_mul(block_base):
 
     def __mul__(self, x):
         for op in reversed(self.chain):
-            from dolfin.cpp.la import GenericMatrix
-            from dolfin import GenericVector
-            if isinstance(op, GenericMatrix) and isinstance(x, GenericVector):
+            from dolfin import Matrix, GenericVector
+            if isinstance(op, Matrix) and isinstance(x, GenericVector):
                 y = op.create_vec(dim=0)
                 op.mult(x, y)
                 x = y
