@@ -25,7 +25,7 @@ class Flux(UserExpression):
             values[0] = 0.0
     def value_shape(self): return ()
     
-N = 2
+N = 16
 
 # Parse command-line arguments like "N=6"
 import sys

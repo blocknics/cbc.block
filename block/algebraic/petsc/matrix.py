@@ -242,7 +242,8 @@ def _collapse(x):
 
     # This method knows too much about the internal variables of the
     # block_mul objects... should convert to accessor functions.
-
+    from dolfin import Matrix
+    
     from block.block_compose import block_mul, block_add, block_sub, block_transpose
     from block.block_mat import block_mat
     from block.block_util import isscalar
