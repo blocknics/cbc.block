@@ -66,7 +66,7 @@ bb  = block_assemble([L1, L2])
 # Create preconditioners: An ML preconditioner for A, and the inverse diagonal
 # of the mass matrix for the (2,2) block.
 PP11 = InvDiag(A)
-PP22 = ML(P22)
+PP22 = AMG(P22)
 
 prec = block_mat([[PP11, 0],
                   [0, PP22]])

@@ -32,6 +32,6 @@
 for k in 1 0.1 0.01 0.001; do
     echo ":: k_val=" $k
     for N in 16 32 64 128 256; do
-	python timestokes.py k_val=$k N=$N
+	python3 timestokes.py k_val=$k N=$N
     done
 done

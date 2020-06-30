@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 from .common import *
 
 def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, callback=None):
@@ -56,7 +57,7 @@ def precondBiCGStab(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
 
         beta  = (rrn/rr0)*(alpha/w)
         if beta==0.0:
-            print ("BiCGStab breakdown, beta=0, at iter=",iter," with residual=", residual)
+            print(("BiCGStab breakdown, beta=0, at iter=",iter," with residual=", residual))
             return x, residuals, alphas, betas
         rr0   = rrn
         p     = r+beta*(p-w*ABp)

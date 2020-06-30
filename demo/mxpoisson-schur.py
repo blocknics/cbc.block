@@ -26,7 +26,7 @@ from block.algebraic.petsc import *
 
 import os
 
-dolfin.set_log_level(15)
+set_log_level(15)
 
 N = 48 
 mesh = UnitSquareMesh(N, N) 
@@ -65,7 +65,7 @@ bb  = block_assemble([L1, L2])
 PP11 = InvDiag(A)
 
 P22 = collapse(C*PP11*B) 
-PP22 = ML(P22)
+PP22 = AMG(P22)
 
 prec = block_mat([[PP11, 0],
                   [0, PP22]])

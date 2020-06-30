@@ -18,6 +18,7 @@ and BB^ approximates the inverse of the block operator
   BB = |       |.
        | 0   L |
 """
+from __future__ import print_function
 
 from dolfin import *
 from block import *
@@ -101,4 +102,3 @@ print ("Norm of pressure coefficient vector: %.15g" % p.norm("l2"))
 # Plot solution
 plot(Function(V, u))
 plot(Function(Q, p))
-interactive()

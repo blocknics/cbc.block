@@ -12,17 +12,17 @@ cd ${0%/*}
 demos=$(find . -name \*.py)
 
 if which parallel &>/dev/null; then
-    parallel --gnu -j +0 --halt-on-error=2 -v -n 1 python ::: $demos
+    parallel --gnu -j +0 --halt-on-error=2 -v -n 1 python3 ::: $demos
 else
     for demo in $demos; do
-	echo python $demo
-	python $demo
+	echo python3 $demo
+	python3 $demo
     done
 fi
 
-for demo in $demos; do
-    echo mpirun -np 3 python $demo
-    mpirun -np 3 python $demo
-done
+#for demo in $demos; do
+#    echo mpirun -np 3 python $demo
+#    mpirun -np 3 python $demo
+#done
 
 ps -o etime,cputime $$

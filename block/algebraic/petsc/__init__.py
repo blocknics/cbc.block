@@ -1,3 +1,4 @@
+from builtins import object
 def _init():
     import block.algebraic
     class active_backend(object):

@@ -1,4 +1,7 @@
 from __future__ import division
+from __future__ import absolute_import
+from builtins import map
+from builtins import range
 from . import *
 from .block_util import block_tensor, isscalar, wrap_in_list, create_vec_from 
 
@@ -37,7 +40,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
         if MPI.size(mpi_comm_world()) > 1:
             raise NotImplementedError(error_msg['mpi and symm'])
     if has_lhs and has_rhs:
-        A, b = map(block_tensor,[lhs,rhs])
+        A, b = list(map(block_tensor,[lhs,rhs]))
         n, m = A.blocks.shape
         if not ( isinstance(b,block_vec) and  len(b.blocks) is m):
             raise TypeError(error_msg['incompatibility'])
@@ -56,10 +59,10 @@ def block_assemble(lhs, rhs=None, bcs=None,
     from dolfin import assemble
     assemble_if_form = lambda x: assemble(x, keep_diagonal=True) if _is_form(x) else x
     if A:
-        A.blocks.flat[:] = map(assemble_if_form,A.blocks.flat)
+        A.blocks.flat[:] = list(map(assemble_if_form,A.blocks.flat))
     if b:
         #b.blocks.flat[:] = map(assemble_if_form, b.blocks.flat)
-        b = block_vec(map(assemble_if_form, b.blocks.flat))
+        b = block_vec(list(map(assemble_if_form, b.blocks.flat)))
     # If there are no boundary conditions then we are done.
     if bcs is None:
         if A:
@@ -70,7 +73,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
     # check if arguments are forms, in which case bcs have to be split
     from ufl import Form
     if isinstance(lhs, Form):
-        from splitting import split_bcs
+        from .splitting import split_bcs
         bcs = split_bcs(bcs, m)
     # Otherwise check that boundary conditions are valid.
     if not hasattr(bcs,'__iter__'):
@@ -95,7 +98,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
     if not A:
         if symmetric_mod:
             b.allocate(symmetric_mod)
-        for i in xrange(m):
+        for i in range(m):
             if bcs[i]:
                 if isscalar(b[i]):
                     b[i], val = create_vec_from(bcs[i][0]), b[i]
@@ -117,7 +120,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
     elif symmetric:
         from numpy.random import random
         signs = [0]*m
-        for i in xrange(m):
+        for i in range(m):
             if isscalar(A[i,i]):
                 signs[i] = -1 if A[i,i] < 0 else 1
             else:
@@ -132,7 +135,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
         # then we need to store the symmetric corretions to b
         # as a matrix which we call A_mod
         b, A_mod = A.create_vec(), A.copy()
-    for i in xrange(n):
+    for i in range(n):
         if bcs[i]:
             for bc in bcs[i]:
                 # Apply BCs to the diagonal block.
@@ -148,7 +151,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
                 else:
                     bc.apply(A[i,i])
                 # Zero out the rows corresponding to BC dofs.
-                for j in range(i) + range(i+1,n):
+                for j in list(range(i)) + list(range(i+1,n)):
                     if A[i,j] is 0:
                         continue
                     assert not isscalar(A[i,j])
@@ -156,7 +159,7 @@ def block_assemble(lhs, rhs=None, bcs=None,
                 # If we are not preserving symmetry then we are done at this point.
                 # Otherwise, we need to zero out the columns as well
                 if symmetric:
-                    for j in range(i) + range(i+1,n):
+                    for j in list(range(i)) + list(range(i+1,n)):
                         if A[j,i] is 0:
                             continue
                         assert not isscalar(A[j,i])
@@ -183,14 +186,16 @@ def _is_form(form):
     return isinstance(form, (cpp_Form, ufl_Form))
 
 def _new_square_matrix(bc, val):
-    from dolfin import TrialFunction, TestFunction
+    from dolfin import TrialFunction, TestFunction, FunctionSpace
     from dolfin import assemble, Constant, inner, dx
     import numpy
-    V = bc.function_space()
+    
+    V = FunctionSpace(bc.function_space())
+    
     u,v = TrialFunction(V),TestFunction(V)
     Z = assemble(Constant(0)*inner(u,v)*dx)
     if val != 0.0:
-        lrange = range(*Z.local_range(0))
+        lrange = list(range(*Z.local_range(0)))
         idx = numpy.ndarray(len(lrange), dtype=numpy.intc)
         idx[:] = lrange
         Z.ident(idx)

@@ -1,4 +1,5 @@
 from __future__ import division
+from builtins import range
 from .block_base import block_container
 from .block_vec import block_vec
 
@@ -26,7 +27,7 @@ class block_mat(block_container):
         for i in range(m):
             for j in range(n):
                 if isinstance(self[i,j], (numpy.ndarray, numpy.matrix)):
-                    z = numpy.matrix(self[i,j]) * numpy.matrix(x[j].array()).transpose()
+                    z = numpy.matrix(self[i,j]) * numpy.matrix(x[j].get_local()).transpose()
                     z = numpy.array(z).flatten()
                     if y[i] is None: 
                         y[i] = x[j].copy()

@@ -1,5 +1,3 @@
-from __future__ import division
-
 """This demo shows the use of a non-trivial block preconditioner for the time
 dependent Stokes equations. It is adapted from the code described in the block
 preconditioning chapter of the FENiCS book, by Kent-Andre Mardal
@@ -22,14 +20,16 @@ the ML algebraic multigrid preconditioner for A, L, and M, and the CGN
 iterative solver in order to get eigenvalue estimates for the preconditioned
 systems.
 """
+from __future__ import division
+from __future__ import print_function
 
 from dolfin import *
 from block import *
 from block.iterative import CGN
-from block.algebraic.petsc import ML
+from block.algebraic.petsc import AMG
 import numpy
 
-dolfin.set_log_level(30)
+set_log_level(30)
 
 N=2
 k_val=1
@@ -43,12 +43,9 @@ class Boundary(SubDomain):
     def inside(self, x, on_boundary):
         return on_boundary
 
-class BoundaryFunction(Expression):
-    def value_shape(self):
-        return (2,)
-    def eval(self, values, x):
-        values[0] = 1 if near(x[1],1) else 0
-        values[1] = 0
+
+BoundaryFunction = Expression(('std::abs(x[1]-1) < 1E-13 ? 1: 0', '0'), degree=1)
+
 
 mesh = UnitSquareMesh(N,N)
 
@@ -68,7 +65,7 @@ a12 = div(v)*p*dx
 a21 = div(u)*q*dx
 L1  = dot(f, v)*dx
 
-bcs = block_bc([DirichletBC(V, BoundaryFunction(), Boundary()), None], True)
+bcs = block_bc([DirichletBC(V, BoundaryFunction, Boundary()), None], True)
 AA = block_assemble([[a11, a12],
                      [a21,  0 ]])
 bb = block_assemble([L1, 0])
@@ -80,8 +77,8 @@ bcs.apply(AA).apply(bb)
 M = assemble(kinv*p*q*dx)
 L = assemble(dot(grad(p),grad(q))*dx)
 
-prec = block_mat([[ML(A),      0     ],
-                  [0,     ML(L)+ML(M)]])
+prec = block_mat([[AMG(A),      0     ],
+                  [0,     AMG(L)+AMG(M)]])
 
 xx = AA.create_vec()
 xx.randomize()
@@ -90,4 +87,4 @@ AAinv = CGN(AA, precond=prec, initial_guess=xx, tolerance=1e-11, show=0)
 x = AAinv*bb
 e = AAinv.eigenvalue_estimates()
 
-print "N=%d K=%.3g" % (N, sqrt(e[-1]/e[0]))
+print("N=%d K=%.3g" % (N, sqrt(e[-1]/e[0])))

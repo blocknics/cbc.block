@@ -1,4 +1,8 @@
 from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 from .block_base import block_container
 
 class block_vec(block_container):
@@ -144,7 +148,7 @@ class block_vec(block_container):
 
 
     def copy(self):
-        from .block_util import copy
+        from . import block_util
         m = len(self)
         y = block_vec(m)
         for i in range(m):

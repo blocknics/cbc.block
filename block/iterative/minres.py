@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 from .common import *
 
 def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0, callback=None):
@@ -206,6 +207,6 @@ def minres(B, A, x, b, tolerance, maxiter, progress, relativeconv=False, shift=0
             break
 
     if istop != 1:
-        print ('MinRes:', msg[istop])
+        print(('MinRes:', msg[istop]))
 
     return x, residuals, [], []

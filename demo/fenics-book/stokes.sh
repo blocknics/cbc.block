@@ -30,8 +30,8 @@
 
 for param in "" "porder=0" "vorder=1" "vorder=1 alpha=0.01"; do
     echo "::" $param
-    for N in 16 32 64 128 256; do
-	python stokes.py $param N=$N
+    for N in 16 32; do
+	python3 stokes.py $param N=$N
     done
 done
 

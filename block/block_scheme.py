@@ -1,5 +1,6 @@
 from __future__ import division
 
+from builtins import range
 """These classes are typically not used directly, but returned by a call to
 block_mat.scheme().
 """
@@ -18,7 +19,7 @@ def block_jacobi(op):
 class block_gs(block_base):
     def __init__(self, op, reverse=False, truncated=False, symmetric=False, w=1.0):
         self.op = op
-        self.range = range(len(op))
+        self.range = list(range(len(op)))
         if reverse:
             self.range.reverse()
         if symmetric:

@@ -1,5 +1,8 @@
 from __future__ import division
 
+from builtins import str
+from builtins import range
+from builtins import object
 """Utility functions for plotting, boundaries, etc."""
 
 import os
@@ -36,7 +39,7 @@ class BoxBoundary(object):
     def _compile(self, **kwargs):
         # Make sure all expressions sent to compile_subdomains are different
         expr_to_code = {}
-        for expr in kwargs.values():
+        for expr in list(kwargs.values()):
             expr_to_code[expr] = None
 
         #print expr_to_code.keys()
@@ -44,9 +47,9 @@ class BoxBoundary(object):
         for i, expr in enumerate(expr_to_code.keys()):
             expr_to_code[expr] = CompiledSubDomain(expr)
 
-        return [(name, expr_to_code[expr]) for name, expr in kwargs.items()]
+        return [(name, expr_to_code[expr]) for name, expr in list(kwargs.items())]
 
-class update():
+class update(object):
     """Plot and save given functional(s). Example:
     u = problem.solve()
     update.set_args(displacement={'mode': 'displacement'})
@@ -74,7 +77,7 @@ class update():
                     if mesh is not None:
                         break
                     if mesh is None:
-                        raise (RuntimeError, "Unable to project expression, no suitable mesh.")
+                        raise RuntimeError
 
         # Create function space
         shape = expression.shape()
@@ -85,7 +88,7 @@ class update():
         elif len(shape) == 2:
             V = TensorFunctionSpace(mesh, "CG", 1, shape=shape)
         else:
-            raise (RuntimeError, "Unable to project expression, unhandled rank, shape is %s." % (shape,))
+            raise RuntimeError
 
         return V
 
@@ -96,7 +99,7 @@ class update():
                 if isinstance(mesh, cpp.Mesh):
                     V = FunctionSpaceBase(mesh, v.ufl_element())
                 else:
-                    raise (TypeError, "expected a mesh when projecting an Expression")
+                    raise TypeError
             else:
                 V = self._extract_function_space(f, mesh)
         key = str(V)
@@ -152,7 +155,7 @@ class update():
             self.plots[name].update(data, title=title, **kwargs)
 
     def __call__(self, time=None, postfix="", **functionals):
-        for name,func in sorted(functionals.iteritems()):
+        for name,func in sorted(functionals.items()):
             args = self.kwargs.get(name, {})
             if 'functionspace' in args or not isinstance(func, Function):
                 func = self.project(func, name, args.get('functionspace'))
@@ -182,9 +185,9 @@ def rigid_body_modes(V, show_plot=False):
 
     # Create integrator for whole mesh
     mf0 = MeshFunction('size_t', mesh, 1, 0)
-    dx = dolfin.dx[mf0](0)
+    dx = Measure('dx', domain=mesh, subdomain_data=mf0)(0)
 
-    M_inv = LinearSolver('cg', 'ilu')
+    M_inv = KrylovSolver('cg', 'ilu')
     M_inv.parameters['relative_tolerance']=1e-4
     M_inv.set_operator(assemble(inner(u,v)*dx))
     def proj(form, ortho_modes):

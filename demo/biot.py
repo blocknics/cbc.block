@@ -1,4 +1,13 @@
 from __future__ import division
+from __future__ import print_function
+
+from block import *
+from block.iterative import *
+from block.algebraic.petsc import *
+from dolfin import *
+from block.dolfin_util import *
+import numpy
+
 
 """This demo program shows the use of block preconditioners with Biot's consolidation equations.
 
@@ -40,13 +49,6 @@ ML approximations. Since the inverse is in principle exact, we do not need an
 outer iterative solver, but nevertheless we use a single iteration of the
 Richardson method just for reporting purposes.
 """
-
-from block import *
-from block.iterative import *
-from block.algebraic.petsc import *
-from dolfin import *
-from block.dolfin_util import *
-import numpy
 
 # Function spaces, elements
 
@@ -104,7 +106,7 @@ c = 0.25
 h = mesh.hmin()
 fluid_source_domain = CompiledSubDomain('{min}<x[0] && x[0]<{max} && {min}<x[1] && x[1]<{max}'
                                          .format(min=c-h, max=c+h))
-topload_source      = Expression("-sin(2*t*pi)*sin(x[0]*pi/2)/3", degree=3, t=0)
+topload_source      = Expression("-sin(2*t*pi)*sin(x[0]*pi/2)/3", t=0, degree=5)
 
 bc_u_bedrock        = DirichletBC(V,            [0]*dim,        boundary.bottom)
 bc_u_topload        = DirichletBC(V.sub(dim-1), topload_source, boundary.top)
@@ -129,10 +131,10 @@ rhs_bc = bcs.apply(AA)
 # requires access to the matrix elements, we use the collapse() call to perform
 # the necessary matrix algebra to convert the operator S to a single matrix.
 
-Ap = ML(A, pdes=dim, nullspace=rigid_body_modes(V))
+Ap = AMG(A, pdes=dim, nullspace=rigid_body_modes(V))
 
 S = C*InvDiag(A)*B-D
-Sp = ML(collapse(S))
+Sp = AMG(collapse(S))
 
 AApre = block_mat([[Ap, 0],
                    [0, -Sp]])
@@ -176,12 +178,7 @@ while t <= T:
     u = Function(V, U)
     p = Function(W, P)
 
-    plot(u, key='u', title='u', mode='displacement')
-    plot(p, key='p', title='p')
-
     u_prev.vector()[:] = U
     p_prev.vector()[:] = P
     t += float(dt)
-
-interactive()
 print ("Finished normally")

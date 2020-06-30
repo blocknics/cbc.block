@@ -1,10 +1,12 @@
+from __future__ import division
+from __future__ import print_function
 from dolfin import *
 from block import *
 from block.iterative import *
-from block.algebraic.petsc import ML
+from block.algebraic.petsc import AMG
 from numpy import random
 
-dolfin.set_log_level(30)
+set_log_level(30)
 
 N = 2
 porder = 1
@@ -20,12 +22,7 @@ class Boundary(SubDomain):
     def inside(self, x, on_boundary):
         return on_boundary
 
-class BoundaryFunction(Expression):
-    def value_shape(self):
-        return (2,)
-    def eval(self, values, x):
-        values[0] = 1 if near(x[1],1) else 0
-        values[1] = 0
+BoundaryFunction = Expression(('std::abs(x[1]-1) < 1E-13 ? 1: 0', '0'), degree=1)
 
 mesh = UnitSquareMesh(N,N)
 def CG(n):
@@ -37,7 +34,7 @@ Q = FunctionSpace(mesh, *CG(porder))
 f = Constant((0,0))
 g = Constant(0)
 alpha = Constant(alpha)
-h = CellSize(mesh)
+h = CellDiameter(mesh)
 
 v,u = TestFunction(V), TrialFunction(V)
 q,p = TestFunction(Q), TrialFunction(Q)
@@ -51,7 +48,7 @@ L2  = q*g*dx
 
 M1 = assemble(p*q*dx)
 
-bcs = block_bc([DirichletBC(V, BoundaryFunction(degree=3), Boundary()), None], True)
+bcs = block_bc([DirichletBC(V, BoundaryFunction, Boundary()), None], True)
 AA = block_assemble([[a11, a12],
                      [a21, a22]])
 bb = block_assemble([L1, L2])
@@ -60,8 +57,8 @@ bcs.apply(AA).apply(bb)
 [[A, B],
  [C, D]] = AA
 
-BB = block_mat([[ML(A),  0],
-                [0, ML(M1)]])
+BB = block_mat([[AMG(A),  0],
+                [0, AMG(M1)]])
 
 
 AAinv = MinRes(AA, precond=BB, tolerance=1e-8, show=0)
@@ -75,4 +72,4 @@ AAi * bb
 
 e = AAi.eigenvalue_estimates()
 
-print "N=%d iter=%d K=%.3g" % (N, AAinv.iterations, sqrt(e[-1]/e[0]))
+print("N=%d iter=%d K=%.3g" % (N, AAinv.iterations, sqrt(e[-1]/e[0])))
