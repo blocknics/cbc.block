@@ -152,7 +152,7 @@ class block_vec(block_container):
         m = len(self)
         y = block_vec(m)
         for i in range(m):
-            y[i] = copy(self[i])
+            y[i] = block_util.copy(self[i])
         return y
     
     def zero(self): return self._map_operator('zero', True)
