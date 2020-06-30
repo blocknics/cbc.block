@@ -104,7 +104,7 @@ c = 0.25
 h = mesh.hmin()
 fluid_source_domain = CompiledSubDomain('{min}<x[0] && x[0]<{max} && {min}<x[1] && x[1]<{max}'
                                          .format(min=c-h, max=c+h))
-topload_source      = Expression("-sin(2*t*pi)*sin(x[0]*pi/2)/3", t=0)
+topload_source      = Expression("-sin(2*t*pi)*sin(x[0]*pi/2)/3", degree=3, t=0)
 
 bc_u_bedrock        = DirichletBC(V,            [0]*dim,        boundary.bottom)
 bc_u_topload        = DirichletBC(V.sub(dim-1), topload_source, boundary.top)

@@ -51,7 +51,7 @@ L2  = q*g*dx
 
 M1 = assemble(p*q*dx)
 
-bcs = block_bc([DirichletBC(V, BoundaryFunction(), Boundary()), None], True)
+bcs = block_bc([DirichletBC(V, BoundaryFunction(degree=3), Boundary()), None], True)
 AA = block_assemble([[a11, a12],
                      [a21, a22]])
 bb = block_assemble([L1, L2])
