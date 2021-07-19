@@ -107,10 +107,10 @@ bcs.apply(AA).apply(bb)
  [C, _]] = AA
 
 # Create a preconditioner for A (using the ML preconditioner from Trilinos)
-Ap = AMG(A)
+# Ap = AMG(A)
 
 # Alternative b: Use multilevel preconditioner from hazmath (UA-AMG)
-# Ap = hazAMG(A)
+Ap = hazAMG(A)
 
 # Create an approximate inverse of L=C*B using inner Richardson iterations
 L = C*B
