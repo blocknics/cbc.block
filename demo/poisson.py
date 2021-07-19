@@ -1,6 +1,7 @@
 from block import *
 from block.iterative import *
 from block.algebraic.petsc import *
+from block.algebraic.hazmath import AMG as hazAMG
 from dolfin import *
 from block.dolfin_util import *
 import numpy
@@ -20,7 +21,10 @@ L = f*v*dx
 A = assemble(a)
 b = assemble(L)
 
-B = AMG(A)
+# hypre AMG
+# B = AMG(A)
+# hazmath AMG
+B = hazAMG(A)
 
 Ainv = ConjGrad(A, precond=B, tolerance=1e-10, show=2)
 
