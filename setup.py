@@ -7,6 +7,6 @@ setup(name = "cbc.block",
       author = "Joachim Berdal Haga",
       author_email = "jobh@simula.no",
       url = "http://www.launchpad.net/cbc.block/",
-      packages = ["block", "block.algebraic", "block.algebraic.trilinos", "block.iterative", "block.algebraic.petsc"]
+      packages = ["block", "block.algebraic", "block.algebraic.trilinos", "block.iterative", "block.algebraic.petsc", "block.algebraic.hazmath"]
 )
 
