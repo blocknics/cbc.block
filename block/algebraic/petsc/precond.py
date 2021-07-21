@@ -2,7 +2,9 @@ from __future__ import division
 
 from builtins import str
 from block.block_base import block_base
+from block.object_pool import vec_pool
 from petsc4py import PETSc
+import dolfin as df
 
 class precond(block_base):
     def __init__(self, A, prectype, parameters=None, pdes=1, nullspace=None):
@@ -205,3 +207,90 @@ class Jacobi(precond):
         if parameters:
             options.update(parameters)
         precond.__init__(self, A, PETSc.PC.Type.JACOBI, options, pdes, nullspace)
+
+
+# HYPRE's AMS preconditioner for div-div/curl-curl problems in 2D
+
+from dolfin import *
+from petsc4py import PETSc
+from block.block_base import block_base
+import numpy as np
+import ufl
+
+
+def vec(x):
+    return as_backend_type(x).vec()
+
+
+def mat(A):
+    return as_backend_type(A).mat()
+
+
+class HypreAMS(block_base):
+    '''
+    AMG auxiliary space preconditioner for H(curl) problems in 2d/3d and
+    H(div) problems in 2d. The bilinear form behind the matrix whose 
+    approximate inverse is constructed is: Find u in V
+
+       alpha*inner(curl(u), curl(v)) + beta*inner(u, v)*dx for all v in V
+
+    where alpha > 0 and beta >= 0.
+    '''
+    def mat(A):
+        return df.as_backend_type(A).mat()
+
+    def vec(b):
+        return df.as_backend_type(b).vec()
+    
+    def __init__(self, A, V, ams_zero_beta_poisson=False):
+        mesh = V.mesh()
+        if mesh.geometry().dim() == 2:
+            assert V.ufl_element().family() in ('Raviart-Thomas', 'Nedelec 1st kind H(curl)')
+        else:
+            assert V.ufl_element().family() == 'Nedelec 1st kind H(curl)'
+        # FIXME: only tested this for lower orders
+        assert V.ufl_element().degree() == 1
+            
+        # AMS setup requires auxiliary operators
+        Q = df.FunctionSpace(mesh, 'CG', 1)
+        G = DiscreteOperators.build_gradient(V, Q)
+
+        pc = PETSc.PC().create(mesh.mpi_comm())
+        pc.setType('hypre')
+        pc.setHYPREType('ams')
+
+        pc.setHYPREDiscreteGradient(HypreAMS.mat(G))
+
+        # Constants
+        constants = [HypreAMS.vec(df.interpolate(df.Constant(c), V).vector())
+                     for c in np.eye(mesh.geometry().dim())]
+
+        pc.setHYPRESetEdgeConstantVectors(*constants)
+
+        # NOTE: signal that we don't have lower order term
+        ams_zero_beta_poisson and pc.setHYPRESetBetaPoissonMatrix(None)
+
+        pc.setOperators(HypreAMS.mat(A))
+
+        pc.setFromOptions()
+        pc.setUp()
+
+        self.pc = pc
+        self.A = A   # For creating vec
+
+    def matvec(self, b):
+        if not isinstance(b, GenericVector):
+            return NotImplemented
+        x = self.A.create_vec(dim=1)
+
+        if x.size() != b.size():
+            raise RuntimeError(
+                'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
+
+        self.pc.apply(HypreAMS.vec(b), HypreAMS.vec(x))
+
+        return x
+
+    @vec_pool
+    def create_vec(self, dim=1):
+        return self.A.create_vec(dim)
