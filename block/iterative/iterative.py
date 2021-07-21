@@ -27,6 +27,7 @@ class iterative(block_base):
             maxiter = iter
         self.tolerance = tolerance
         self.maxiter = maxiter
+        self.cputime = 0.
 
     def create_vec(self, dim=1):
         return self.A.create_vec(dim)
@@ -89,6 +90,7 @@ class iterative(block_base):
         else:
             msg = "NOT CONV."
 
+        self.cputime = time()-T
         if self.show == 1:
             print('%s %s [iter=%2d, time=%.2fs, res=%.1e]' \
                 % (self.name, msg, self.iterations, time()-T, self.residuals[-1]))

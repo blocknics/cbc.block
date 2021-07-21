@@ -47,6 +47,7 @@ from __future__ import print_function
 from block import *
 from block.iterative import *
 from block.algebraic.petsc import AMG, collapse
+from block.algebraic.hazmath import AMG as hazAMG
 from dolfin import *
 
 # Create mesh
@@ -106,7 +107,10 @@ bcs.apply(AA).apply(bb)
  [C, _]] = AA
 
 # Create a preconditioner for A (using the ML preconditioner from Trilinos)
-Ap = AMG(A)
+# Ap = AMG(A)
+
+# Alternative b: Use multilevel preconditioner from hazmath (UA-AMG)
+Ap = hazAMG(A)
 
 # Create an approximate inverse of L=C*B using inner Richardson iterations
 L = C*B
@@ -115,14 +119,14 @@ Lp = Richardson(L, precond=0.5, iter=40, name='L^')
 # Alternative b: Use inner Conjugate Gradient iterations. Not completely safe,
 # but faster (and does not require damping).
 #
-#Lp = ConjGrad(L, maxiter=40, name='L^')
+# Lp = ConjGrad(L, maxiter=40, name='L^')
 
 # Alternative c: Calculate the matrix product, so that a regular preconditioner
 # can be used. The "collapse" function collapses a composed operator into a
 # single matrix. For larger problems, and in particular on parallel computers,
 # this is a very expensive operation --- but here it works fine.
 #
-#Lp = ML(collapse(L))
+# Lp = ML(collapse(L))
 
 # Define the block preconditioner
 AAp = block_mat([[Ap, 0],
