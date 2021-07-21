@@ -4,6 +4,20 @@ from dolfin import as_backend_type
 import haznics
 
 
+def PETSc_to_dCSRmat(A):
+    """
+    Change data type for matrix (PETSc or dolfin matrix to dCSRmat pointer)
+    """
+    petsc_mat = as_backend_type(A).mat()
+
+    # NB! store copies for now
+    csr0 = petsc_mat.getValuesCSR()[0]
+    csr1 = petsc_mat.getValuesCSR()[1]
+    csr2 = petsc_mat.getValuesCSR()[2]
+
+    return haznics.create_matrix(csr2, csr1, csr0)
+
+
 class Precond(block_base):
     """
     Class of general preconditioners from HAZmath using SWIG
@@ -26,14 +40,7 @@ class Precond(block_base):
                 "precond... ",
                 RuntimeWarning)
             # change data type for the matrix (to dCSRmat pointer)
-            petsc_mat = as_backend_type(A).mat()
-
-            # NB! store copies for now
-            csr0 = petsc_mat.getValuesCSR()[0]
-            csr1 = petsc_mat.getValuesCSR()[1]
-            csr2 = petsc_mat.getValuesCSR()[2]
-
-            A_ptr = haznics.create_matrix(csr2, csr1, csr0)
+            A_ptr = PETSc_to_dCSRmat(A)
 
             # initialize amg parameters (AMG_param pointer)
             amgparam = haznics.amg_param_alloc(1)
@@ -89,14 +96,7 @@ class AMG(Precond):
 
     def __init__(self, A, parameters={}):
         # change data type for the matrix (to dCSRmat pointer)
-        petsc_mat = as_backend_type(A).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat.getValuesCSR()[0]
-        csr1 = petsc_mat.getValuesCSR()[1]
-        csr2 = petsc_mat.getValuesCSR()[2]
-
-        A_ptr = haznics.create_matrix(csr2, csr1, csr0)
+        A_ptr = PETSc_to_dCSRmat(A)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.amg_param_alloc(1)
@@ -132,25 +132,9 @@ class FAMG(Precond):
     """
 
     def __init__(self, A, M, parameters={'fpwr': 0.5, 'smoother': 'fjacobi'}):
-        # change data type for the A matrix (to dCSRmat pointer)
-        petsc_mat_A = as_backend_type(A).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_A.getValuesCSR()[0]
-        csr1 = petsc_mat_A.getValuesCSR()[1]
-        csr2 = petsc_mat_A.getValuesCSR()[2]
-
-        A_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the M matrix (to dCSRmat pointer)
-        petsc_mat_M = as_backend_type(M).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_M.getValuesCSR()[0]
-        csr1 = petsc_mat_M.getValuesCSR()[1]
-        csr2 = petsc_mat_M.getValuesCSR()[2]
-
-        M_ptr = haznics.create_matrix(csr2, csr1, csr0)
+        # change data type for the matrices (to dCSRmat pointer)
+        A_ptr = PETSc_to_dCSRmat(A)
+        M_ptr = PETSc_to_dCSRmat(M)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.amg_param_alloc(1)
@@ -186,25 +170,9 @@ class RA(Precond):
     def __init__(self, A, M, dim=2,
                  parameters={'coefs': [1.0, 0.0], 'pwrs': [0.5, 0.0]}):
 
-        # change data type for the matrix (to dCSRmat pointer)
-        petsc_mat_A = as_backend_type(A).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_A.getValuesCSR()[0]
-        csr1 = petsc_mat_A.getValuesCSR()[1]
-        csr2 = petsc_mat_A.getValuesCSR()[2]
-
-        A_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the M matrix (to dCSRmat pointer)
-        petsc_mat_M = as_backend_type(M).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_M.getValuesCSR()[0]
-        csr1 = petsc_mat_M.getValuesCSR()[1]
-        csr2 = petsc_mat_M.getValuesCSR()[2]
-
-        M_ptr = haznics.create_matrix(csr2, csr1, csr0)
+        # change data type for the matrices (to dCSRmat pointer)
+        A_ptr = PETSc_to_dCSRmat(A)
+        M_ptr = PETSc_to_dCSRmat(M)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.amg_param_alloc(1)
@@ -222,13 +190,13 @@ class RA(Precond):
 
         # get scalings
         scaling_a = 1. / A.norm("linf")
-        scaling_m = 1. / petsc_mat_M.getDiagonal().min()[1]
+        scaling_m = 1. / as_backend_type(M).mat().getDiagonal().min()[1]
 
         # get coefs and powers
         alpha, beta = parameters['coefs']
         s_power, t_power = parameters['pwrs']
 
-        # set AMG preconditioner #
+        # set RA preconditioner #
         precond = haznics.create_precond_ra(A_ptr, M_ptr, s_power, t_power,
                                             alpha, beta, scaling_a, scaling_m,
                                             amgparam)
@@ -246,39 +214,14 @@ class HXCurl(Precond):
     """
     HX preconditioner from the HAZmath library for the curl-curl inner product
     NB! only for 3D problems
-
+    TODO: needs update and test
     """
 
     def __init__(self, Acurl, Pcurl, Grad, parameters={}):
-        # change data type for the Acurl matrix (to dCSRmat pointer)
-        petsc_mat_A = as_backend_type(Acurl).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_A.getValuesCSR()[0]
-        csr1 = petsc_mat_A.getValuesCSR()[1]
-        csr2 = petsc_mat_A.getValuesCSR()[2]
-
-        Acurl_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the Pcurl matrix (to dCSRmat pointer)
-        petsc_mat_P = as_backend_type(Pcurl).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_P.getValuesCSR()[0]
-        csr1 = petsc_mat_P.getValuesCSR()[1]
-        csr2 = petsc_mat_P.getValuesCSR()[2]
-
-        Pcurl_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the Grad matrix (to dCSRmat pointer)
-        petsc_mat_G = as_backend_type(Grad).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_G.getValuesCSR()[0]
-        csr1 = petsc_mat_G.getValuesCSR()[1]
-        csr2 = petsc_mat_G.getValuesCSR()[2]
-
-        Grad_ptr = haznics.create_matrix(csr2, csr1, csr0)
+        # change data type for the matrices (to dCSRmat pointer)
+        Acurl_ptr = PETSc_to_dCSRmat(Acurl)
+        Pcurl_ptr = PETSc_to_dCSRmat(Pcurl)
+        Grad_ptr = PETSc_to_dCSRmat(Grad)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.amg_param_alloc(1)
@@ -300,7 +243,7 @@ class HXCurl(Precond):
         except KeyError:
             prectype = haznics.PREC_HX_CURL_A
 
-        # set AMG preconditioner
+        # set HX CURL preconditioner (NB: this sets up both data and fct)
         precond = haznics.create_precond_hxcurl(Acurl_ptr, Pcurl_ptr, Grad_ptr,
                                                 prectype, amgparam)
 
@@ -308,7 +251,7 @@ class HXCurl(Precond):
         if not precond:
             raise RuntimeError(
                 "HXcurl data failed to set up (null pointer returned) ")
-
+        """
         try:
             prectype = parameters['prectype']
         except KeyError:
@@ -321,47 +264,22 @@ class HXCurl(Precond):
             precond.fct = haznics.precond_hx_curl_multiplicative
         else:  # default is additive
             precond.fct = haznics.precond_hx_curl_additive
-
+        """
         Precond.__init__(self, Acurl, "HXCurl_add", parameters, precond)
 
 
 class HXDiv(Precond):
     """
     HX preconditioner from the HAZmath library for the div-div inner product
-
+    TODO: needs update and test
     """
 
     def __init__(self, Adiv, Pdiv, Curl, Pcurl=None,
                  parameters={'dimension': 2}):
-        # change data type for the Adiv matrix (to dCSRmat pointer)
-        petsc_mat_A = as_backend_type(Adiv).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_A.getValuesCSR()[0]
-        csr1 = petsc_mat_A.getValuesCSR()[1]
-        csr2 = petsc_mat_A.getValuesCSR()[2]
-
-        Adiv_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the Pdiv matrix (to dCSRmat pointer)
-        petsc_mat_P = as_backend_type(Pdiv).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_P.getValuesCSR()[0]
-        csr1 = petsc_mat_P.getValuesCSR()[1]
-        csr2 = petsc_mat_P.getValuesCSR()[2]
-
-        Pdiv_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-        # change data type for the Curl matrix (to dCSRmat pointer)
-        petsc_mat_C = as_backend_type(Curl).mat()
-
-        # NB! store copies for now
-        csr0 = petsc_mat_C.getValuesCSR()[0]
-        csr1 = petsc_mat_C.getValuesCSR()[1]
-        csr2 = petsc_mat_C.getValuesCSR()[2]
-
-        Curl_ptr = haznics.create_matrix(csr2, csr1, csr0)
+        # change data type for the matrices (to dCSRmat pointer)
+        Adiv_ptr = PETSc_to_dCSRmat(Adiv)
+        Pdiv_ptr = PETSc_to_dCSRmat(Pdiv)
+        Curl_ptr = PETSc_to_dCSRmat(Curl)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.amg_param_alloc(1)
@@ -394,16 +312,9 @@ class HXDiv(Precond):
             assert Pcurl, "For 3D case, Pcurl operator is needed!"
 
             # change data type for the Pcurl matrix (to dCSRmat pointer)
-            petsc_mat_P = as_backend_type(Pcurl).mat()
+            Pcurl_ptr = PETSc_to_dCSRmat(Pcurl)
 
-            # NB! store copies for now
-            csr0 = petsc_mat_P.getValuesCSR()[0]
-            csr1 = petsc_mat_P.getValuesCSR()[1]
-            csr2 = petsc_mat_P.getValuesCSR()[2]
-
-            Pcurl_ptr = haznics.create_matrix(csr2, csr1, csr0)
-
-            # set AMG preconditioner
+            # set HX DIV preconditioner (NB: this sets up both data and fct)
             precond = haznics.create_precond_hxdiv_3D(Adiv_ptr, Pdiv_ptr,
                                                       Curl_ptr, Pcurl_ptr,
                                                       prectype, amgparam)
@@ -427,7 +338,7 @@ class HXDiv(Precond):
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
 
         else:
-            # set AMG preconditioner
+            # set HX DIV preconditioner (NB: this sets up both data and fct)
             precond = haznics.create_precond_hxdiv_2D(Adiv_ptr, Pdiv_ptr,
                                                       Curl_ptr, prectype,
                                                       amgparam)
