@@ -1,4 +1,4 @@
-# (pytorch) mirok@evalApply:demo (master)*$ python hodge.py "N=64"
+# (pytorch) mirok@evalApply:demo (master)*$ python hodge.py "N=16; dim=3"
 """This demo shows the use of a non-trivial block preconditioner for the Hodge
 equations namely the curl-curl multigrid is employed for the Schur complement 
 preconditioner. It is adapted from the code described in the block preconditioning
@@ -33,13 +33,13 @@ from block.algebraic.petsc import *
 set_log_level(30)
 
 N = 4
-
+dim = 2
 # Parse command-line arguments like "N=6"
 import sys
 for s in sys.argv[1:]:
     exec(s)
 
-mesh = UnitSquareMesh(N, N)
+mesh = {2: UnitSquareMesh, 3: UnitCubeMesh}[dim](*(N, )*dim)
 
 V = FunctionSpace(mesh, "N1curl", 1)
 Q = FunctionSpace(mesh, "CG", 1)
@@ -56,7 +56,9 @@ E = assemble(p*q*dx + dot(grad(p),grad(q))*dx)
 AA = block_mat([[A,  B],
                 [C, -D]])
 
-b0 = assemble(inner(v, Constant((1, 2)))*dx)
+gdim = mesh.geometry().dim()
+b0 = assemble(inner(v, Constant((1, )*gdim))*dx)
+              
 b1 = assemble(inner(q, Constant(2))*dx)
 bb = block_vec([b0, b1])
 
@@ -66,7 +68,7 @@ prec = block_mat([[HypreAMS(A, V),  0  ],
 AAinv = MinRes(AA, precond=prec, tolerance=1e-9, maxiter=2000, show=2)
 [Uh, Ph] = AAinv*bb
 
-if MPI.size(mesh.mpi_comm()) == 1:
+if MPI.size(mesh.mpi_comm()) == 1 and gdim == 2:
     import matplotlib.pyplot as plt
 
     plt.subplot(121)
