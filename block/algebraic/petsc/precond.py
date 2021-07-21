@@ -5,6 +5,8 @@ from block.block_base import block_base
 from block.object_pool import vec_pool
 from petsc4py import PETSc
 import dolfin as df
+import numpy as np
+
 
 class precond(block_base):
     def __init__(self, A, prectype, parameters=None, pdes=1, nullspace=None):
@@ -209,21 +211,12 @@ class Jacobi(precond):
         precond.__init__(self, A, PETSc.PC.Type.JACOBI, options, pdes, nullspace)
 
 
-# HYPRE's AMS preconditioner for div-div/curl-curl problems in 2D
-
-from dolfin import *
-from petsc4py import PETSc
-from block.block_base import block_base
-import numpy as np
-import ufl
-
-
 def vec(x):
-    return as_backend_type(x).vec()
+    return df.as_backend_type(x).vec()
 
 
 def mat(A):
-    return as_backend_type(A).mat()
+    return df.as_backend_type(A).mat()
 
 
 class HypreAMS(block_base):
@@ -236,12 +229,6 @@ class HypreAMS(block_base):
 
     where alpha > 0 and beta >= 0.
     '''
-    def mat(A):
-        return df.as_backend_type(A).mat()
-
-    def vec(b):
-        return df.as_backend_type(b).vec()
-    
     def __init__(self, A, V, ams_zero_beta_poisson=False):
         mesh = V.mesh()
         if mesh.geometry().dim() == 2:
@@ -253,16 +240,16 @@ class HypreAMS(block_base):
             
         # AMS setup requires auxiliary operators
         Q = df.FunctionSpace(mesh, 'CG', 1)
-        G = DiscreteOperators.build_gradient(V, Q)
+        G = df.DiscreteOperators.build_gradient(V, Q)
 
         pc = PETSc.PC().create(mesh.mpi_comm())
         pc.setType('hypre')
         pc.setHYPREType('ams')
 
-        pc.setHYPREDiscreteGradient(HypreAMS.mat(G))
+        pc.setHYPREDiscreteGradient(mat(G))
 
         # Constants
-        constants = [HypreAMS.vec(df.interpolate(df.Constant(c), V).vector())
+        constants = [vec(df.interpolate(df.Constant(c), V).vector())
                      for c in np.eye(mesh.geometry().dim())]
 
         pc.setHYPRESetEdgeConstantVectors(*constants)
@@ -270,7 +257,7 @@ class HypreAMS(block_base):
         # NOTE: signal that we don't have lower order term
         ams_zero_beta_poisson and pc.setHYPRESetBetaPoissonMatrix(None)
 
-        pc.setOperators(HypreAMS.mat(A))
+        pc.setOperators(mat(A))
 
         pc.setFromOptions()
         pc.setUp()
@@ -279,7 +266,7 @@ class HypreAMS(block_base):
         self.A = A   # For creating vec
 
     def matvec(self, b):
-        if not isinstance(b, GenericVector):
+        if not isinstance(b, df.GenericVector):
             return NotImplemented
         x = self.A.create_vec(dim=1)
 
@@ -287,7 +274,112 @@ class HypreAMS(block_base):
             raise RuntimeError(
                 'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
 
-        self.pc.apply(HypreAMS.vec(b), HypreAMS.vec(x))
+        self.pc.apply(vec(b), vec(x))
+
+        return x
+
+    @vec_pool
+    def create_vec(self, dim=1):
+        return self.A.create_vec(dim)
+
+
+class HypreADS(block_base):
+    '''
+    AMG auxiliary space preconditioner for H(div) problems in 3d. The bilinear 
+    form behind the matrix whose approximate inverse is constructed is: Find u in V
+
+       alpha*inner(div(u), div(v)) + beta*inner(u, v)*dx for all v in V
+
+    where alpha > 0 and beta >= 0.
+    '''
+    @staticmethod
+    def coordinates(mesh):
+        '''As P1 functions'''
+        V = df.FunctionSpace(mesh, 'CG', 1)
+        
+        return V.tabulate_dof_coordinates()
+
+    @staticmethod
+    def discrete_gradient(mesh):
+        '''P1 to Ned1 map'''
+        Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+        P1 = df.FunctionSpace(mesh, 'CG', 1)
+    
+        G = df.DiscreteOperators.build_gradient(Ned, P1)
+
+        return mat(G)
+    
+    @staticmethod
+    def discrete_curl(mesh):
+        '''Ned1 to RT1 map'''
+        assert mesh.geometry().dim() == 3
+        assert mesh.topology().dim() == 3
+
+        Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+        RT = df.FunctionSpace(mesh, 'RT', 1)
+
+        RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+        Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+
+        a = df.inner(df.TestFunction(RT), df.TrialFunction(Ned))*df.dx
+        C = df.PETScMatrix()
+        df.assemble(a, tensor=C)
+
+        RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+        Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+
+        # Facets in terms of edges
+        mesh.init(2, 1)
+        f2e = mesh.topology()(2, 1)
+
+        row_cols, row_values = np.zeros(3, dtype='int32'), np.array([-2, 2, -2])
+        Cmat = C.mat()
+        
+        for facet, row in enumerate(RT_f2dof):
+            row_cols[:] = Ned_e2dof[f2e(facet)]            
+            Cmat.setValues([row], row_cols, row_values, PETSc.InsertMode.INSERT_VALUES)
+        Cmat.assemble()
+            
+        return Cmat
+
+    def __init__(self, A, V):
+        assert V.mesh().geometry().dim() == 3
+        assert V.ufl_element().family() == 'Raviart-Thomas'
+        assert V.ufl_element().degree() == 1
+
+        mesh = V.mesh()
+        # FIXME: curl matrix needs to be fixed for parallel        
+        assert mesh.mpi_comm().size == 1  
+        
+        C = HypreADS.discrete_curl(mesh)
+        G = HypreADS.discrete_gradient(mesh)
+        xyz = HypreADS.coordinates(mesh)
+
+        pc = PETSc.PC().create(mesh.mpi_comm())
+        pc.setOperators(mat(A))
+                    
+        pc.setType('hypre')
+        pc.setHYPREType('ads')
+        # Attach auxiliary operators
+        pc.setHYPREDiscreteGradient(G)
+        pc.setHYPREDiscreteCurl(G)
+        pc.setCoordinates(xyz)
+        pc.setUp()
+    
+        self.pc = pc
+        self.A = A   # For creating vec
+ 
+    def matvec(self, b):
+        if not isinstance(b, df.GenericVector):
+            return NotImplemented
+        x = self.A.create_vec(dim=1)
+
+        if x.size() != b.size():
+            raise RuntimeError(
+                'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
+        b_, x_ = mat(self.A).createVecs()
+        
+        self.pc.apply(vec(b), vec(x))
 
         return x
 

@@ -26,11 +26,12 @@ from __future__ import print_function
 
 from block import *
 from block.iterative import *
-from block.algebraic.petsc import AMG, HypreAMS
+from block.algebraic.petsc import AMG, HypreADS
 from dolfin import *
 
+n = 16
 # Create mesh
-mesh = UnitSquareMesh(64, 64)
+mesh = UnitCubeMesh(n, n, n)
 
 # Define function spaces
 RT = FunctionSpace(mesh, "RT", 1)
@@ -42,7 +43,7 @@ v,   u     = TestFunction(DG),  TrialFunction(DG)
 
 # Define function G such that G \cdot n = g
 class BoundarySource(UserExpression):
-    def __init__(self, mesh):
+    def __init__(self, mesh, **kwargs):
         super().__init__(self)
         self.mesh = mesh
     def eval_cell(self, values, x, ufc_cell):
@@ -51,14 +52,15 @@ class BoundarySource(UserExpression):
         g = sin(5*x[0])
         values[0] = g*n[0]
         values[1] = g*n[1]
+        values[2] = g*n[2]        
     def value_shape(self):
-        return (2,)
+        return (3,)
 
-G = BoundarySource(mesh)
+G = BoundarySource(mesh, degree=1)
 
 # Define essential boundary
 def boundary(x):
-    return near(x[1], 0.0) or near(x[1], 1.0)
+    return near(x[1], 0.0) 
 
 # Define the blockwise boundary conditions -- a Dirichlet condition on the
 # first block, and no conditions on the second block.
@@ -91,7 +93,7 @@ BB = block_assemble([[prec11, 0],
 bcs.apply(BB)
 
 # We invert the blocks by taylored multigrid
-M = HypreAMS(A=BB[0][0], V=RT)
+M = HypreADS(A=BB[0][0], V=RT)
 N = AMG(BB[1][1])
 
 # Define the block preconditioner
@@ -111,12 +113,5 @@ print(('norm U    :', U.norm('l2')))
 
 # Plot sigma and u
 if MPI.size(mesh.mpi_comm()) == 1:
-    import matplotlib.pyplot as plt
-
-    plt.subplot(121)
-    plot(Function(RT, Sigma))
-
-    plt.subplot(122)    
-    plot(Function(DG,  U))
-
-    plt.show()
+    File('sigma_h.pvd') << Function(RT, Sigma)
+    File('u_h.pvd') << Function(DG,  U)
