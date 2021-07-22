@@ -24,11 +24,11 @@ class Precond(block_base):
 
     """
 
-    def __init__(self, A, prectype, parameters={}, precond=None):
+    def __init__(self, A, prectype=None, parameters=None, precond=None):
         # haznics.dCSRmat* type (assert?)
         self.A = A
         # python dictionary of parameters
-        self.parameters = parameters
+        self.parameters = parameters if parameters else {}
 
         # init and set preconditioner (precond *)
         if precond:
@@ -56,7 +56,7 @@ class Precond(block_base):
                     "AMG levels failed to set up (null pointer returned) ")
 
         # preconditioner type (string)
-        self.prectype = prectype
+        self.prectype = prectype if prectype else "AMG"
 
     def matvec(self, b):
         from dolfin import GenericVector
@@ -94,7 +94,7 @@ class AMG(Precond):
 
     """
 
-    def __init__(self, A, parameters={}):
+    def __init__(self, A, parameters=None):
         # change data type for the matrix (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
 
@@ -102,7 +102,7 @@ class AMG(Precond):
         amgparam = haznics.amg_param_alloc(1)
 
         # set extra amg parameters
-        if parameters:
+        if parameters and isinstance(parameters, dict):
             for key in parameters:
                 if isinstance(parameters[key], str):
                     exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
@@ -122,16 +122,16 @@ class AMG(Precond):
             raise RuntimeError(
                 "AMG levels failed to set up (null pointer returned) ")
 
-        Precond.__init__(self, A, "amg", parameters, precond)
+        Precond.__init__(self, A, "AMG", parameters, precond)
 
 
 class FAMG(Precond):
     """
-    AMG preconditioner from the HAZmath Library
+    Fractional AMG preconditioner from the HAZmath Library
 
     """
 
-    def __init__(self, A, M, parameters={'fpwr': 0.5, 'smoother': 'fjacobi'}):
+    def __init__(self, A, M, parameters=None):
         # change data type for the matrices (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
         M_ptr = PETSc_to_dCSRmat(M)
@@ -140,17 +140,18 @@ class FAMG(Precond):
         amgparam = haznics.amg_param_alloc(1)
 
         # set extra amg parameters
-        if parameters:
-            for key in parameters:
-                if isinstance(parameters[key], str):
-                    exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-                else:
-                    exec("amgparam.%s = %s" % (key, parameters[key]))
+        parameters = parameters if (parameters and isinstance(parameters, dict)) \
+            else {'fpwr': 0.5, 'smoother': 'fjacobi'}
+        for key in parameters:
+            if isinstance(parameters[key], str):
+                exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
+            else:
+                exec("amgparam.%s = %s" % (key, parameters[key]))
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
 
-        # set AMG preconditioner
+        # set FAMG preconditioner
         precond = haznics.create_precond_famg(A_ptr, M_ptr, amgparam)
 
         # if fail, setup returns null
@@ -158,7 +159,7 @@ class FAMG(Precond):
             raise RuntimeError(
                 "FAMG levels failed to set up (null pointer returned) ")
 
-        Precond.__init__(self, A, "famg", parameters, precond)
+        Precond.__init__(self, A, "FAMG", parameters, precond)
 
 
 class RA(Precond):
@@ -167,9 +168,7 @@ class RA(Precond):
 
     """
 
-    def __init__(self, A, M, dim=2,
-                 parameters={'coefs': [1.0, 0.0], 'pwrs': [0.5, 0.0]}):
-
+    def __init__(self, A, M, parameters=None):
         # change data type for the matrices (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
         M_ptr = PETSc_to_dCSRmat(M)
@@ -178,12 +177,13 @@ class RA(Precond):
         amgparam = haznics.amg_param_alloc(1)
 
         # set extra amg parameters
-        if parameters:
-            for key in parameters:
-                if isinstance(parameters[key], str):
-                    exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-                else:
-                    exec("amgparam.%s = %s" % (key, parameters[key]))
+        parameters = parameters if (parameters and isinstance(parameters, dict)) \
+            else {'coefs': [1.0, 0.0], 'pwrs': [0.5, 0.0]}
+        for key in parameters:
+            if isinstance(parameters[key], str):
+                exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
+            else:
+                exec("amgparam.%s = %s" % (key, parameters[key]))
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -217,7 +217,7 @@ class HXCurl(Precond):
     TODO: needs update and test
     """
 
-    def __init__(self, Acurl, Pcurl, Grad, parameters={}):
+    def __init__(self, Acurl, Pcurl, Grad, parameters=None):
         # change data type for the matrices (to dCSRmat pointer)
         Acurl_ptr = PETSc_to_dCSRmat(Acurl)
         Pcurl_ptr = PETSc_to_dCSRmat(Pcurl)
@@ -227,7 +227,7 @@ class HXCurl(Precond):
         amgparam = haznics.amg_param_alloc(1)
 
         # set extra amg parameters
-        if parameters:
+        if parameters and isinstance(parameters, dict):
             for key in parameters:
                 if isinstance(parameters[key], str):
                     exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
@@ -274,8 +274,7 @@ class HXDiv(Precond):
     TODO: needs update and test
     """
 
-    def __init__(self, Adiv, Pdiv, Curl, Pcurl=None,
-                 parameters={'dimension': 2}):
+    def __init__(self, Adiv, Pdiv, Curl, Pcurl=None, parameters=None):
         # change data type for the matrices (to dCSRmat pointer)
         Adiv_ptr = PETSc_to_dCSRmat(Adiv)
         Pdiv_ptr = PETSc_to_dCSRmat(Pdiv)
@@ -285,7 +284,7 @@ class HXDiv(Precond):
         amgparam = haznics.amg_param_alloc(1)
 
         # set extra amg parameters
-        if parameters:
+        if parameters and isinstance(parameters, dict):
             for key in parameters:
                 if isinstance(parameters[key], str):
                     exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
