@@ -99,17 +99,11 @@ class AMG(Precond):
         A_ptr = PETSc_to_dCSRmat(A)
 
         # initialize amg parameters (AMG_param pointer)
-        amgparam = haznics.amg_param_alloc(1)
+        amgparam = haznics.AMG_param()
 
         # set extra amg parameters
-        if parameters and isinstance(parameters, dict):
-            for key in parameters:
-                if isinstance(parameters[key], str):
-                    exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-                # elif isinstance(parameters[key], function):
-                #     haznics.py_callback_setup(parameters[key], amgparam)
-                else:
-                    exec("amgparam.%s = %s" % (key, parameters[key]))
+        if parameters:
+            haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -137,16 +131,12 @@ class FAMG(Precond):
         M_ptr = PETSc_to_dCSRmat(M)
 
         # initialize amg parameters (AMG_param pointer)
-        amgparam = haznics.amg_param_alloc(1)
+        amgparam = haznics.AMG_param()
 
         # set extra amg parameters
         parameters = parameters if (parameters and isinstance(parameters, dict)) \
             else {'fpwr': 0.5, 'smoother': 'fjacobi'}
-        for key in parameters:
-            if isinstance(parameters[key], str):
-                exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-            else:
-                exec("amgparam.%s = %s" % (key, parameters[key]))
+        haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -174,16 +164,12 @@ class RA(Precond):
         M_ptr = PETSc_to_dCSRmat(M)
 
         # initialize amg parameters (AMG_param pointer)
-        amgparam = haznics.amg_param_alloc(1)
+        amgparam = haznics.AMG_param()
 
         # set extra amg parameters
         parameters = parameters if (parameters and isinstance(parameters, dict)) \
             else {'coefs': [1.0, 0.0], 'pwrs': [0.5, 0.0]}
-        for key in parameters:
-            if isinstance(parameters[key], str):
-                exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-            else:
-                exec("amgparam.%s = %s" % (key, parameters[key]))
+        haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -224,15 +210,11 @@ class HXCurl(Precond):
         Grad_ptr = PETSc_to_dCSRmat(Grad)
 
         # initialize amg parameters (AMG_param pointer)
-        amgparam = haznics.amg_param_alloc(1)
+        amgparam = haznics.AMG_param()
 
         # set extra amg parameters
         if parameters and isinstance(parameters, dict):
-            for key in parameters:
-                if isinstance(parameters[key], str):
-                    exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-                else:
-                    exec("amgparam.%s = %s" % (key, parameters[key]))
+            haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -281,15 +263,11 @@ class HXDiv(Precond):
         Curl_ptr = PETSc_to_dCSRmat(Curl)
 
         # initialize amg parameters (AMG_param pointer)
-        amgparam = haznics.amg_param_alloc(1)
+        amgparam = haznics.AMG_param()
 
         # set extra amg parameters
         if parameters and isinstance(parameters, dict):
-            for key in parameters:
-                if isinstance(parameters[key], str):
-                    exec("amgparam.%s = \"%s\"" % (key, parameters[key]))
-                else:
-                    exec("amgparam.%s = %s" % (key, parameters[key]))
+            haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
