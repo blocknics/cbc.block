@@ -72,6 +72,10 @@ class precond(block_base):
     def __str__(self):
         return '<%s prec of %s>'%(self.__class__.__name__, str(self.A))
 
+    def create_vec(self, dim=1):
+        return self.A.create_vec(dim)
+
+    
 class ML(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None):
         options = {
