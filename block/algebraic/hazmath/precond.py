@@ -368,7 +368,7 @@ def discrete_curl(mesh):
 
     rows = np.repeat(RT_f2dof, 3)
     cols = Ned_e2dof[f2e()]
-    vals = np.tile(np.array([-1, 1, -1]), RT.dim())
+    vals = np.tile(np.array([-2, 2, -2]), RT.dim())
 
     Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
 
@@ -436,40 +436,36 @@ def Pcurl(mesh):
     assert mesh.topology().dim() == 3
 
     Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
-    P1 = df.FunctionSpace(mesh, 'CG', 1)
+    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
 
     Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
-    P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
 
     # Facets in terms of edges
     mesh.init(1, 0)
     e2n = mesh.topology()(1, 0)
-    coordinates = P1.tabulate_dof_coordinates()
+    coordinates = mesh.coordinates()
 
-    rows = np.repeat(Ned_e2dof, 2)
-    cols = P1_n2dof[e2n()]
-    vals_x = np.zeros(2 * Ned.dim())
-    vals_y = np.zeros(2 * Ned.dim())
-    vals_z = np.zeros(2 * Ned.dim())
-
-    row_cols = np.zeros(2, dtype='int32')
+    rows_x, rows_y, rows_z = np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2)
+    cols_x, cols_y, cols_z = P1_n2dof_x[e2n()], P1_n2dof_y[e2n()], P1_n2dof_z[e2n()]
+    vals_x, vals_y, vals_z = np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim())
 
     for edge, row in enumerate(Ned_e2dof):
-        row_cols[:] = P1_n2dof[e2n(edge)]
-
-        edge_tangent = coordinates[row_cols[1]] - coordinates[row_cols[0]]  # todo: check tangent orient!!
+        vertices = e2n(edge)
+        edge_tangent = coordinates[vertices[1]] - coordinates[vertices[0]]
 
         indices = np.arange(2) + 2 * edge
         vals_x[indices] = np.array([edge_tangent[0]/2] * 2)
         vals_y[indices] = np.array([edge_tangent[1]/2] * 2)
         vals_z[indices] = np.array([edge_tangent[2]/2] * 2)
 
-    Pcurl_x = csr_matrix((vals_x, (rows, cols)), shape=(Ned.dim(), P1.dim()))
-    Pcurl_y = csr_matrix((vals_y, (rows, cols)), shape=(Ned.dim(), P1.dim()))
-    Pcurl_z = csr_matrix((vals_z, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    rows = np.concatenate((rows_x, rows_y, rows_z))
+    cols = np.concatenate((cols_x, cols_y, cols_z))
+    vals = np.concatenate((vals_x, vals_y, vals_z))
 
-    # assemble Pcurl as hstack of xyz components
-    Pcurlcsr = hstack([Pcurl_x, Pcurl_y, Pcurl_z], format='csr')
+    Pcurlcsr = csr_matrix((vals, (rows, cols)), shape=(Ned.dim(), P1.dim()))
 
     Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
                                   size=Pcurlcsr.shape,
