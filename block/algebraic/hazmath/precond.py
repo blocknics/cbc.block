@@ -351,7 +351,6 @@ def discrete_gradient(mesh):
     return df.DiscreteOperators.build_gradient(Ned, P1)
 
 
-# fixme: return dolfin matrix
 def discrete_curl(mesh):
     """ Ned1 to RT1 map """
     assert mesh.geometry().dim() == 3
@@ -369,11 +368,15 @@ def discrete_curl(mesh):
 
     rows = np.repeat(RT_f2dof, 3)
     cols = Ned_e2dof[f2e()]
-    vals = np.tile(np.array([-2, 2, -2]), RT.dim())  # todo: check this!!!
+    vals = np.tile(np.array([-1, 1, -1]), RT.dim())
 
     Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
 
-    return Ccsr
+    C = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                              size=Ccsr.shape,
+                              csr=(Ccsr.indptr, Ccsr.indices, Ccsr.data))
+
+    return df.PETScMatrix(C)
 
 
 # fixme: return dolfin matrix
@@ -417,7 +420,13 @@ def Pdiv(mesh):
     Pdiv_z = csr_matrix((vals_z, (rows, cols)), shape=(RT.dim(), P1.dim()))
 
     # assemble Pdiv as hstack of xyz components
-    return hstack([Pdiv_x, Pdiv_y, Pdiv_z])
+    Pdivcsr = hstack([Pdiv_x, Pdiv_y, Pdiv_z], format='csr')
+
+    Pdiv = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                                 size=Pdivcsr.shape,
+                                 csr=(Pdivcsr.indptr, Pdivcsr.indices, Pdivcsr.data))
+
+    return df.PETScMatrix(Pdiv)
 
 
 # fixme: return dolfin matrix
@@ -460,11 +469,17 @@ def Pcurl(mesh):
     Pcurl_z = csr_matrix((vals_z, (rows, cols)), shape=(Ned.dim(), P1.dim()))
 
     # assemble Pcurl as hstack of xyz components
-    return hstack([Pcurl_x, Pcurl_y, Pcurl_z])
+    Pcurlcsr = hstack([Pcurl_x, Pcurl_y, Pcurl_z], format='csr')
+
+    Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                                  size=Pcurlcsr.shape,
+                                  csr=(Pcurlcsr.indptr, Pcurlcsr.indices, Pcurlcsr.data))
+
+    return df.PETScMatrix(Pcurl)
 
 
 if __name__ == '__main__':
-    mesh = df.UnitCubeMesh(4, 4, 4)
+    mesh = df.UnitCubeMesh(1, 1, 1)
     G = discrete_gradient(mesh)
     C = discrete_curl(mesh)
     Pc = Pcurl(mesh)
