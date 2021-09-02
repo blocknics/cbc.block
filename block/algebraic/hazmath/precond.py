@@ -4,7 +4,7 @@ from builtins import str
 from petsc4py import PETSc
 import dolfin as df
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, hstack
 import haznics
 
 
@@ -351,7 +351,6 @@ def discrete_gradient(mesh):
     return df.DiscreteOperators.build_gradient(Ned, P1)
 
 
-# copied from block/algebraic/petsc/
 # fixme: return dolfin matrix
 def discrete_curl(mesh):
     """ Ned1 to RT1 map """
@@ -370,36 +369,35 @@ def discrete_curl(mesh):
 
     rows = np.repeat(RT_f2dof, 3)
     cols = Ned_e2dof[f2e()]
-    vals = np.tile(np.array([-2, 2, -2]), RT.dim())
+    vals = np.tile(np.array([-2, 2, -2]), RT.dim())  # todo: check this!!!
 
     Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
 
     return Ccsr
 
 
+# fixme: return dolfin matrix
+# NB: this is only 3d!
 def Pdiv(mesh):
+    """ nodes to faces map """
     RT = df.FunctionSpace(mesh, 'Raviart-Thomas', 1)
     P1 = df.FunctionSpace(mesh, 'CG', 1)
 
     RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
     P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
 
-    import pdb; pdb.set_trace()
-
-    # nodes to faces map
-    a = df.inner(df.TestFunction(RT), df.TrialFunction(P1)) * df.dx
-    Pdiv = df.PETScMatrix()
-    df.assemble(a, tensor=Pdiv)
-
     # Facets in terms of nodes
     mesh.init(2, 0)
     f2n = mesh.topology()(2, 0)
     coordinates = P1.tabulate_dof_coordinates()
 
+    rows = np.repeat(RT_f2dof, 3)
+    cols = P1_n2dof[f2n()]
+    vals_x = np.zeros(3 * RT.dim())
+    vals_y = np.zeros(3 * RT.dim())
+    vals_z = np.zeros(3 * RT.dim())
+
     row_cols = np.zeros(3, dtype='int32')
-    Pdivmat_x = Pdiv.mat()
-    Pdivmat_y = Pdiv.mat().copy()
-    Pdivmat_z = Pdiv.mat().copy()
 
     for facet, row in enumerate(RT_f2dof):
         row_cols[:] = P1_n2dof[f2n(facet)]
@@ -407,31 +405,24 @@ def Pdiv(mesh):
 
         facet_normal = df.Facet(mesh, facet).normal().array()
         facet_norm = np.linalg.norm(facet_normal)
-        facet_area = np.einsum("ij, ij->i", n1, np.cross(n2, n3))
+        facet_area = np.dot(n1, np.cross(n2, n3))
 
-        valx = facet_normal[0] * facet_area / (3 * facet_norm)
-        valy = facet_normal[1] * facet_area / (3 * facet_norm)
-        valz = facet_normal[2] * facet_area / (3 * facet_norm)
+        indices = np.arange(3) + 3 * facet
+        vals_x[indices] = facet_normal[0] * facet_area / (3 * facet_norm)
+        vals_y[indices] = facet_normal[1] * facet_area / (3 * facet_norm)
+        vals_z[indices] = facet_normal[2] * facet_area / (3 * facet_norm)
 
-        row_values_x = np.array([valx] * 3)
-        row_values_y = np.array([valy] * 3)
-        row_values_z = np.array([valz] * 3)
-
-        Pdivmat_x.setValues([row], row_cols, row_values_x, PETSc.InsertMode.INSERT_VALUES)
-        Pdivmat_y.setValues([row], row_cols, row_values_y, PETSc.InsertMode.INSERT_VALUES)
-        Pdivmat_z.setValues([row], row_cols, row_values_z, PETSc.InsertMode.INSERT_VALUES)
-
-    Pdivmat_x.assemble()
-    Pdivmat_y.assemble()
-    Pdivmat_z.assemble()
+    Pdiv_x = csr_matrix((vals_x, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    Pdiv_y = csr_matrix((vals_y, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    Pdiv_z = csr_matrix((vals_z, (rows, cols)), shape=(RT.dim(), P1.dim()))
 
     # assemble Pdiv as hstack of xyz components
-    Pdiv = block_mat([Pdivmat_x, Pdivmat_y, Pdivmat_z])
-    # fixme: collapse into petsc or dolfin mat
-    return Pdiv
+    return hstack([Pdiv_x, Pdiv_y, Pdiv_z])
 
 
+# fixme: return dolfin matrix
 def Pcurl(mesh):
+    """ nodes to edges map """
     assert mesh.geometry().dim() == 3
     assert mesh.topology().dim() == 3
 
@@ -441,44 +432,41 @@ def Pcurl(mesh):
     Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
     P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
 
-    # nodes to edges map
-    Pcurl = discrete_gradient(mesh).T.mat()
-
     # Facets in terms of edges
     mesh.init(1, 0)
     e2n = mesh.topology()(1, 0)
     coordinates = P1.tabulate_dof_coordinates()
 
+    rows = np.repeat(Ned_e2dof, 2)
+    cols = P1_n2dof[e2n()]
+    vals_x = np.zeros(2 * Ned.dim())
+    vals_y = np.zeros(2 * Ned.dim())
+    vals_z = np.zeros(2 * Ned.dim())
+
     row_cols = np.zeros(2, dtype='int32')
-    Pcurlmat_x = Pcurl.mat()
-    Pcurlmat_y = Pcurl.mat().copy()
-    Pcurlmat_z = Pcurl.mat().copy()
 
     for edge, row in enumerate(Ned_e2dof):
         row_cols[:] = P1_n2dof[e2n(edge)]
 
-        edge_tangent = coordinates(row_cols[0]) - coordinates(row_cols[1])
+        edge_tangent = coordinates[row_cols[1]] - coordinates[row_cols[0]]  # todo: check tangent orient!!
 
-        row_values_x = np.array([edge_tangent[0]/2] * 2)
-        row_values_y = np.array([edge_tangent[1]/2] * 2)
-        row_values_z = np.array([edge_tangent[2]/2] * 2)
+        indices = np.arange(2) + 2 * edge
+        vals_x[indices] = np.array([edge_tangent[0]/2] * 2)
+        vals_y[indices] = np.array([edge_tangent[1]/2] * 2)
+        vals_z[indices] = np.array([edge_tangent[2]/2] * 2)
 
-        Pcurlmat_x.setValues([row], row_cols, row_values_x, PETSc.InsertMode.INSERT_VALUES)
-        Pcurlmat_y.setValues([row], row_cols, row_values_y, PETSc.InsertMode.INSERT_VALUES)
-        Pcurlmat_z.setValues([row], row_cols, row_values_z, PETSc.InsertMode.INSERT_VALUES)
-
-    Pcurlmat_x.assemble()
-    Pcurlmat_y.assemble()
-    Pcurlmat_z.assemble()
+    Pcurl_x = csr_matrix((vals_x, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    Pcurl_y = csr_matrix((vals_y, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    Pcurl_z = csr_matrix((vals_z, (rows, cols)), shape=(Ned.dim(), P1.dim()))
 
     # assemble Pcurl as hstack of xyz components
-    Pcurl = block_mat([Pcurlmat_x, Pcurlmat_y, Pcurlmat_z])
-    # fixme: collapse into petsc or dolfin mat
-    return Pcurl
+    return hstack([Pcurl_x, Pcurl_y, Pcurl_z])
 
 
 if __name__ == '__main__':
     mesh = df.UnitCubeMesh(4, 4, 4)
+    G = discrete_gradient(mesh)
     C = discrete_curl(mesh)
-    import pdb; pdb.set_trace()
+    Pc = Pcurl(mesh)
+    Pd = Pdiv(mesh)
 # ----------------------------------- EOF ----------------------------------- #
