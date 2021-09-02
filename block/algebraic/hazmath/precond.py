@@ -384,43 +384,42 @@ def discrete_curl(mesh):
 def Pdiv(mesh):
     """ nodes to faces map """
     RT = df.FunctionSpace(mesh, 'Raviart-Thomas', 1)
-    P1 = df.FunctionSpace(mesh, 'CG', 1)
+    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
 
     RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
-    P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
 
     # Facets in terms of nodes
     mesh.init(2, 0)
     f2n = mesh.topology()(2, 0)
-    coordinates = P1.tabulate_dof_coordinates()
+    coordinates = mesh.coordinates()
 
-    rows = np.repeat(RT_f2dof, 3)
-    cols = P1_n2dof[f2n()]
-    vals_x = np.zeros(3 * RT.dim())
-    vals_y = np.zeros(3 * RT.dim())
-    vals_z = np.zeros(3 * RT.dim())
-
-    row_cols = np.zeros(3, dtype='int32')
+    rows_x, rows_y, rows_z = np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3)
+    cols_x, cols_y, cols_z = P1_n2dof_x[f2n()], P1_n2dof_y[f2n()], P1_n2dof_z[f2n()]
+    vals_x, vals_y, vals_z = np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim())
 
     for facet, row in enumerate(RT_f2dof):
-        row_cols[:] = P1_n2dof[f2n(facet)]
-        n1, n2, n3 = coordinates[row_cols]
+        vertices = f2n(facet)
+        n1, n2, n3 = coordinates[vertices]
+        edge1, edge2 = n2 - n1, n3 - n1
 
         facet_normal = df.Facet(mesh, facet).normal().array()
         facet_norm = np.linalg.norm(facet_normal)
-        facet_area = np.dot(n1, np.cross(n2, n3))
+        facet_area = 0.5 * np.linalg.norm(np.cross(edge1, edge2))
 
         indices = np.arange(3) + 3 * facet
         vals_x[indices] = facet_normal[0] * facet_area / (3 * facet_norm)
         vals_y[indices] = facet_normal[1] * facet_area / (3 * facet_norm)
         vals_z[indices] = facet_normal[2] * facet_area / (3 * facet_norm)
 
-    Pdiv_x = csr_matrix((vals_x, (rows, cols)), shape=(RT.dim(), P1.dim()))
-    Pdiv_y = csr_matrix((vals_y, (rows, cols)), shape=(RT.dim(), P1.dim()))
-    Pdiv_z = csr_matrix((vals_z, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    rows = np.concatenate((rows_x, rows_y, rows_z))
+    cols = np.concatenate((cols_x, cols_y, cols_z))
+    vals = np.concatenate((vals_x, vals_y, vals_z))
 
-    # assemble Pdiv as hstack of xyz components
-    Pdivcsr = hstack([Pdiv_x, Pdiv_y, Pdiv_z], format='csr')
+    # assemble Pdiv as from xyz components
+    Pdivcsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), P1.dim()))
 
     Pdiv = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
                                  size=Pdivcsr.shape,
@@ -465,6 +464,7 @@ def Pcurl(mesh):
     cols = np.concatenate((cols_x, cols_y, cols_z))
     vals = np.concatenate((vals_x, vals_y, vals_z))
 
+    # assemble Pcurl from xyz components
     Pcurlcsr = csr_matrix((vals, (rows, cols)), shape=(Ned.dim(), P1.dim()))
 
     Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
