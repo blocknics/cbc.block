@@ -1,6 +1,10 @@
 from block.block_base import block_base
+from block import block_mat
 from builtins import str
-from dolfin import as_backend_type
+from petsc4py import PETSc
+import dolfin as df
+import numpy as np
+from scipy.sparse import csr_matrix, hstack
 import haznics
 
 
@@ -8,7 +12,7 @@ def PETSc_to_dCSRmat(A):
     """
     Change data type for matrix (PETSc or dolfin matrix to dCSRmat pointer)
     """
-    petsc_mat = as_backend_type(A).mat()
+    petsc_mat = df.as_backend_type(A).mat()
 
     # NB! store copies for now
     csr0 = petsc_mat.getValuesCSR()[0]
@@ -176,7 +180,7 @@ class RA(Precond):
 
         # get scalings
         scaling_a = 1. / A.norm("linf")
-        scaling_m = 1. / as_backend_type(M).mat().getDiagonal().min()[1]
+        scaling_m = 1. / df.as_backend_type(M).mat().getDiagonal().min()[1]
 
         # get coefs and powers
         alpha, beta = parameters['coefs']
@@ -337,4 +341,132 @@ class HXDiv(Precond):
             """
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
 
+
+# copied from block/algebraic/petsc/
+def discrete_gradient(mesh):
+    """ P1 to Ned1 map """
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    P1 = df.FunctionSpace(mesh, 'CG', 1)
+
+    return df.DiscreteOperators.build_gradient(Ned, P1)
+
+
+# fixme: return dolfin matrix
+def discrete_curl(mesh):
+    """ Ned1 to RT1 map """
+    assert mesh.geometry().dim() == 3
+    assert mesh.topology().dim() == 3
+
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    RT = df.FunctionSpace(mesh, 'RT', 1)
+
+    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+
+    # Facets in terms of edges
+    mesh.init(2, 1)
+    f2e = mesh.topology()(2, 1)
+
+    rows = np.repeat(RT_f2dof, 3)
+    cols = Ned_e2dof[f2e()]
+    vals = np.tile(np.array([-2, 2, -2]), RT.dim())  # todo: check this!!!
+
+    Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
+
+    return Ccsr
+
+
+# fixme: return dolfin matrix
+# NB: this is only 3d!
+def Pdiv(mesh):
+    """ nodes to faces map """
+    RT = df.FunctionSpace(mesh, 'Raviart-Thomas', 1)
+    P1 = df.FunctionSpace(mesh, 'CG', 1)
+
+    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+    P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
+
+    # Facets in terms of nodes
+    mesh.init(2, 0)
+    f2n = mesh.topology()(2, 0)
+    coordinates = P1.tabulate_dof_coordinates()
+
+    rows = np.repeat(RT_f2dof, 3)
+    cols = P1_n2dof[f2n()]
+    vals_x = np.zeros(3 * RT.dim())
+    vals_y = np.zeros(3 * RT.dim())
+    vals_z = np.zeros(3 * RT.dim())
+
+    row_cols = np.zeros(3, dtype='int32')
+
+    for facet, row in enumerate(RT_f2dof):
+        row_cols[:] = P1_n2dof[f2n(facet)]
+        n1, n2, n3 = coordinates[row_cols]
+
+        facet_normal = df.Facet(mesh, facet).normal().array()
+        facet_norm = np.linalg.norm(facet_normal)
+        facet_area = np.dot(n1, np.cross(n2, n3))
+
+        indices = np.arange(3) + 3 * facet
+        vals_x[indices] = facet_normal[0] * facet_area / (3 * facet_norm)
+        vals_y[indices] = facet_normal[1] * facet_area / (3 * facet_norm)
+        vals_z[indices] = facet_normal[2] * facet_area / (3 * facet_norm)
+
+    Pdiv_x = csr_matrix((vals_x, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    Pdiv_y = csr_matrix((vals_y, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    Pdiv_z = csr_matrix((vals_z, (rows, cols)), shape=(RT.dim(), P1.dim()))
+
+    # assemble Pdiv as hstack of xyz components
+    return hstack([Pdiv_x, Pdiv_y, Pdiv_z])
+
+
+# fixme: return dolfin matrix
+def Pcurl(mesh):
+    """ nodes to edges map """
+    assert mesh.geometry().dim() == 3
+    assert mesh.topology().dim() == 3
+
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    P1 = df.FunctionSpace(mesh, 'CG', 1)
+
+    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+    P1_n2dof = np.array(P1.dofmap().entity_dofs(mesh, 0))
+
+    # Facets in terms of edges
+    mesh.init(1, 0)
+    e2n = mesh.topology()(1, 0)
+    coordinates = P1.tabulate_dof_coordinates()
+
+    rows = np.repeat(Ned_e2dof, 2)
+    cols = P1_n2dof[e2n()]
+    vals_x = np.zeros(2 * Ned.dim())
+    vals_y = np.zeros(2 * Ned.dim())
+    vals_z = np.zeros(2 * Ned.dim())
+
+    row_cols = np.zeros(2, dtype='int32')
+
+    for edge, row in enumerate(Ned_e2dof):
+        row_cols[:] = P1_n2dof[e2n(edge)]
+
+        edge_tangent = coordinates[row_cols[1]] - coordinates[row_cols[0]]  # todo: check tangent orient!!
+
+        indices = np.arange(2) + 2 * edge
+        vals_x[indices] = np.array([edge_tangent[0]/2] * 2)
+        vals_y[indices] = np.array([edge_tangent[1]/2] * 2)
+        vals_z[indices] = np.array([edge_tangent[2]/2] * 2)
+
+    Pcurl_x = csr_matrix((vals_x, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    Pcurl_y = csr_matrix((vals_y, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    Pcurl_z = csr_matrix((vals_z, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+
+    # assemble Pcurl as hstack of xyz components
+    return hstack([Pcurl_x, Pcurl_y, Pcurl_z])
+
+
+if __name__ == '__main__':
+    mesh = df.UnitCubeMesh(4, 4, 4)
+    G = discrete_gradient(mesh)
+    C = discrete_curl(mesh)
+    Pc = Pcurl(mesh)
+    Pd = Pdiv(mesh)
 # ----------------------------------- EOF ----------------------------------- #

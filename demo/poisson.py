@@ -1,6 +1,5 @@
 from block import *
 from block.iterative import *
-from block.algebraic.petsc import *
 from block.algebraic.hazmath import AMG as hazAMG
 from dolfin import *
 from block.dolfin_util import *
@@ -21,9 +20,9 @@ L = f*v*dx
 A = assemble(a)
 b = assemble(L)
 
-# hypre AMG
+# to do hypre AMG
 # B = AMG(A)
-# hazmath AMG
+# here we use hazmath AMG:
 B = hazAMG(A)
 
 Ainv = ConjGrad(A, precond=B, tolerance=1e-10, show=2)
@@ -32,10 +31,11 @@ x = Ainv*b
 
 u = Function(V)
 u.vector()[:] = x[:]
-plot(u, title="u, computed by cbc.block [x=Ainv*b]")
 
+# default solver in Dolfin 
 u2 = Function(V)
 solve(A, u2.vector(), b)
-plot(u2, title="u2, computed by dolfin [solve(A,x,b)]")
+
+print ("Max differences between the two solutions: ", (u.vector()-u2.vector()).max()) 
 
 
