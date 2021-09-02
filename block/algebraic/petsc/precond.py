@@ -325,7 +325,8 @@ class HypreADS(block_base):
         RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
         Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
 
-        a = df.inner(df.TestFunction(RT), df.TrialFunction(Ned))*df.dx
+        # Alloc sparsity
+        a = df.Constant(0)*df.inner(df.TestFunction(RT), df.TrialFunction(Ned))*df.dx
         C = df.PETScMatrix()
         df.assemble(a, tensor=C)
 
@@ -338,12 +339,13 @@ class HypreADS(block_base):
 
         row_cols, row_values = np.zeros(3, dtype='int32'), np.array([-2, 2, -2])
         Cmat = C.mat()
-        
+
         for facet, row in enumerate(RT_f2dof):
-            row_cols[:] = Ned_e2dof[f2e(facet)]            
+            row_cols[:] = Ned_e2dof[f2e(facet)]
             Cmat.setValues([row], row_cols, row_values, PETSc.InsertMode.INSERT_VALUES)
         Cmat.assemble()
-            
+
+        
         return Cmat
 
     def __init__(self, A, V):
