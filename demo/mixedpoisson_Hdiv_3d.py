@@ -93,7 +93,7 @@ BB = block_assemble([[prec11, 0],
 bcs.apply(BB)
 
 # We invert the blocks by taylored multigrid
-M = HXDiv(BB[0][0], V=RT, parameters={'dim': 3})
+M = HXDiv(BB[0][0], V=RT)
 N = AMG(BB[1][1])
 
 # Define the block preconditioner

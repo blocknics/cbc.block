@@ -361,6 +361,8 @@ class HXCurl(Precond):
         # set extra amg parameters
         if parameters and isinstance(parameters, dict):
             haznics.param_amg_set_dict(parameters, amgparam)
+        else:
+            parameters = {'prectype': haznics.PREC_HX_CURL_A}
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
@@ -420,13 +422,16 @@ class HXDiv(Precond):
         # set extra amg parameters
         if parameters and isinstance(parameters, dict):
             haznics.param_amg_set_dict(parameters, amgparam)
+        else:
+            parameters = {'dim': mesh.topology().dim(),
+                          'prectype': haznics.PREC_HX_DIV_A}
 
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
 
         # get dimension and type of HX precond application
         try:
-            dim = parameters['dimension']
+            dim = parameters['dim']
         except KeyError:
             dim = 2
 
