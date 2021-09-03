@@ -348,7 +348,7 @@ def discrete_gradient(mesh):
     Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
     P1 = df.FunctionSpace(mesh, 'CG', 1)
 
-    return df.DiscreteOperators.build_gradient(Ned, P1)
+    return df.as_backend_type(df.DiscreteOperators.build_gradient(Ned, P1))
 
 
 def discrete_curl(mesh):
@@ -379,7 +379,6 @@ def discrete_curl(mesh):
     return df.PETScMatrix(C)
 
 
-# fixme: return dolfin matrix
 # NB: this is only 3d!
 def Pdiv(mesh):
     """ nodes to faces map """
@@ -403,16 +402,13 @@ def Pdiv(mesh):
     for facet, row in enumerate(RT_f2dof):
         vertices = f2n(facet)
         n1, n2, n3 = coordinates[vertices]
-        edge1, edge2 = n2 - n1, n3 - n1
 
-        facet_normal = df.Facet(mesh, facet).normal().array()
-        facet_norm = np.linalg.norm(facet_normal)
-        facet_area = 0.5 * np.linalg.norm(np.cross(edge1, edge2))
+        facet_normal = np.cross(n3 - n1, n2 - n1)
 
         indices = np.arange(3) + 3 * facet
-        vals_x[indices] = facet_normal[0] * facet_area / (3 * facet_norm)
-        vals_y[indices] = facet_normal[1] * facet_area / (3 * facet_norm)
-        vals_z[indices] = facet_normal[2] * facet_area / (3 * facet_norm)
+        vals_x[indices] = facet_normal[0] / 3
+        vals_y[indices] = facet_normal[1] / 3
+        vals_z[indices] = facet_normal[2] / 3
 
     rows = np.concatenate((rows_x, rows_y, rows_z))
     cols = np.concatenate((cols_x, cols_y, cols_z))
@@ -428,7 +424,6 @@ def Pdiv(mesh):
     return df.PETScMatrix(Pdiv)
 
 
-# fixme: return dolfin matrix
 def Pcurl(mesh):
     """ nodes to edges map """
     assert mesh.geometry().dim() == 3
@@ -456,9 +451,9 @@ def Pcurl(mesh):
         edge_tangent = coordinates[vertices[1]] - coordinates[vertices[0]]
 
         indices = np.arange(2) + 2 * edge
-        vals_x[indices] = np.array([edge_tangent[0]/2] * 2)
-        vals_y[indices] = np.array([edge_tangent[1]/2] * 2)
-        vals_z[indices] = np.array([edge_tangent[2]/2] * 2)
+        vals_x[indices] = edge_tangent[0] / 2
+        vals_y[indices] = edge_tangent[1] / 2
+        vals_z[indices] = edge_tangent[2] / 2
 
     rows = np.concatenate((rows_x, rows_y, rows_z))
     cols = np.concatenate((cols_x, cols_y, cols_z))
@@ -474,10 +469,4 @@ def Pcurl(mesh):
     return df.PETScMatrix(Pcurl)
 
 
-if __name__ == '__main__':
-    mesh = df.UnitCubeMesh(1, 1, 1)
-    G = discrete_gradient(mesh)
-    C = discrete_curl(mesh)
-    Pc = Pcurl(mesh)
-    Pd = Pdiv(mesh)
 # ----------------------------------- EOF ----------------------------------- #

@@ -1,6 +1,6 @@
 from dolfin import *
 from block.algebraic.hazmath import discrete_curl, discrete_gradient, Pcurl, Pdiv
-import numpy as np
+
 
 def test_grad():
     mesh = UnitSquareMesh(3, 3)
@@ -83,12 +83,12 @@ def test_Pdiv():
     u1_int.vector()[:] = (Pd * u1.vector())[:]
 
     e = inner(u1_int - u2, u1_int - u2) * dx
-    print(sqrt(abs(assemble(e))))
+    assert sqrt(abs(assemble(e))) < 1E-14
 
 
-# test_grad()
-# test_curl()
-# test_Pcurl()
+test_grad()
+test_curl()
+test_Pcurl()
 test_Pdiv()
 
 
