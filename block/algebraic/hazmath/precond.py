@@ -1,18 +1,24 @@
 from block.block_base import block_base
-from block import block_mat
 from builtins import str
 from petsc4py import PETSc
+from scipy.sparse import csr_matrix
 import dolfin as df
 import numpy as np
-from scipy.sparse import csr_matrix, hstack
 import haznics
+
+# ------------------------------------------------------------------- #
+# --------------           auxiliary functions        --------------- #
+# ------------------------------------------------------------------- #
 
 
 def PETSc_to_dCSRmat(A):
     """
-    Change data type for matrix (PETSc or dolfin matrix to dCSRmat pointer)
+    Change data type for matrix
+    (dolfin PETScMatrix or GenericMatrix to dCSRmat pointer)
     """
-    petsc_mat = df.as_backend_type(A).mat()
+    if not isinstance(A, df.PETScMatrix):
+        A = df.as_backend_type(A)
+    petsc_mat = A.mat()
 
     # NB! store copies for now
     csr0 = petsc_mat.getValuesCSR()[0]
@@ -20,6 +26,138 @@ def PETSc_to_dCSRmat(A):
     csr2 = petsc_mat.getValuesCSR()[2]
 
     return haznics.create_matrix(csr2, csr1, csr0)
+
+
+# copied from block/algebraic/petsc/
+def discrete_gradient(mesh):
+    """ P1 to Ned1 map """
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    P1 = df.FunctionSpace(mesh, 'CG', 1)
+
+    return df.as_backend_type(df.DiscreteOperators.build_gradient(Ned, P1))
+
+
+def discrete_curl(mesh):
+    """ Ned1 to RT1 map """
+    assert mesh.geometry().dim() == 3
+    assert mesh.topology().dim() == 3
+
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    RT = df.FunctionSpace(mesh, 'RT', 1)
+
+    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+
+    # Facets in terms of edges
+    mesh.init(2, 1)
+    f2e = mesh.topology()(2, 1)
+
+    rows = np.repeat(RT_f2dof, 3)
+    cols = Ned_e2dof[f2e()]
+    vals = np.tile(np.array([-2, 2, -2]), RT.dim())
+
+    Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
+
+    C = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                              size=Ccsr.shape,
+                              csr=(Ccsr.indptr, Ccsr.indices, Ccsr.data))
+
+    return df.PETScMatrix(C)
+
+
+# NB: this is only 3d!
+def Pdiv(mesh):
+    """ nodes to faces map """
+    RT = df.FunctionSpace(mesh, 'Raviart-Thomas', 1)
+    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
+
+    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
+    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
+
+    # Facets in terms of nodes
+    mesh.init(2, 0)
+    f2n = mesh.topology()(2, 0)
+    coordinates = mesh.coordinates()
+
+    rows_x, rows_y, rows_z = np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3)
+    cols_x, cols_y, cols_z = P1_n2dof_x[f2n()], P1_n2dof_y[f2n()], P1_n2dof_z[f2n()]
+    vals_x, vals_y, vals_z = np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim())
+
+    for facet, row in enumerate(RT_f2dof):
+        vertices = f2n(facet)
+        n1, n2, n3 = coordinates[vertices]
+
+        facet_normal = np.cross(n3 - n1, n2 - n1)
+
+        indices = np.arange(3) + 3 * facet
+        vals_x[indices] = facet_normal[0] / 3
+        vals_y[indices] = facet_normal[1] / 3
+        vals_z[indices] = facet_normal[2] / 3
+
+    rows = np.concatenate((rows_x, rows_y, rows_z))
+    cols = np.concatenate((cols_x, cols_y, cols_z))
+    vals = np.concatenate((vals_x, vals_y, vals_z))
+
+    # assemble Pdiv as from xyz components
+    Pdivcsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), P1.dim()))
+
+    Pdiv = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                                 size=Pdivcsr.shape,
+                                 csr=(Pdivcsr.indptr, Pdivcsr.indices, Pdivcsr.data))
+
+    return df.PETScMatrix(Pdiv)
+
+
+def Pcurl(mesh):
+    """ nodes to edges map """
+    assert mesh.geometry().dim() == 3
+    assert mesh.topology().dim() == 3
+
+    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
+    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
+
+    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
+    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
+    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
+
+    # Facets in terms of edges
+    mesh.init(1, 0)
+    e2n = mesh.topology()(1, 0)
+    coordinates = mesh.coordinates()
+
+    rows_x, rows_y, rows_z = np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2)
+    cols_x, cols_y, cols_z = P1_n2dof_x[e2n()], P1_n2dof_y[e2n()], P1_n2dof_z[e2n()]
+    vals_x, vals_y, vals_z = np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim())
+
+    for edge, row in enumerate(Ned_e2dof):
+        vertices = e2n(edge)
+        edge_tangent = coordinates[vertices[1]] - coordinates[vertices[0]]
+
+        indices = np.arange(2) + 2 * edge
+        vals_x[indices] = edge_tangent[0] / 2
+        vals_y[indices] = edge_tangent[1] / 2
+        vals_z[indices] = edge_tangent[2] / 2
+
+    rows = np.concatenate((rows_x, rows_y, rows_z))
+    cols = np.concatenate((cols_x, cols_y, cols_z))
+    vals = np.concatenate((vals_x, vals_y, vals_z))
+
+    # assemble Pcurl from xyz components
+    Pcurlcsr = csr_matrix((vals, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+
+    Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
+                                  size=Pcurlcsr.shape,
+                                  csr=(Pcurlcsr.indptr, Pcurlcsr.indices, Pcurlcsr.data))
+
+    return df.PETScMatrix(Pcurl)
+
+
+# ------------------------------------------------------------------- #
+# --------------             preconditioners          --------------- #
+# ------------------------------------------------------------------- #
 
 
 class Precond(block_base):
@@ -63,8 +201,7 @@ class Precond(block_base):
         self.prectype = prectype if prectype else "AMG"
 
     def matvec(self, b):
-        from dolfin import GenericVector
-        if not isinstance(b, GenericVector):
+        if not isinstance(b, df.GenericVector):
             return NotImplemented
 
         x = self.A.create_vec(dim=1)
@@ -207,10 +344,15 @@ class HXCurl(Precond):
     TODO: needs update and test
     """
 
-    def __init__(self, Acurl, Pcurl, Grad, parameters=None):
+    def __init__(self, Acurl, V, parameters=None):
+        # get auxiliary operators
+        mesh = V.mesh()
+        Pc = Pcurl(mesh)
+        Grad = discrete_gradient(mesh)
+
         # change data type for the matrices (to dCSRmat pointer)
         Acurl_ptr = PETSc_to_dCSRmat(Acurl)
-        Pcurl_ptr = PETSc_to_dCSRmat(Pcurl)
+        Pcurl_ptr = PETSc_to_dCSRmat(Pc)
         Grad_ptr = PETSc_to_dCSRmat(Grad)
 
         # initialize amg parameters (AMG_param pointer)
@@ -257,13 +399,19 @@ class HXCurl(Precond):
 class HXDiv(Precond):
     """
     HX preconditioner from the HAZmath library for the div-div inner product
+    NB! Pdiv only works for 3D problems
     TODO: needs update and test
     """
 
-    def __init__(self, Adiv, Pdiv, Curl, Pcurl=None, parameters=None):
+    def __init__(self, Adiv, V, parameters=None):
+        # get auxiliary operators
+        mesh = V.mesh()
+        Pd = Pdiv(mesh)
+        Curl = discrete_curl(mesh)
+
         # change data type for the matrices (to dCSRmat pointer)
         Adiv_ptr = PETSc_to_dCSRmat(Adiv)
-        Pdiv_ptr = PETSc_to_dCSRmat(Pdiv)
+        Pdiv_ptr = PETSc_to_dCSRmat(Pd)
         Curl_ptr = PETSc_to_dCSRmat(Curl)
 
         # initialize amg parameters (AMG_param pointer)
@@ -289,11 +437,10 @@ class HXDiv(Precond):
             prectype = haznics.PREC_HX_DIV_A
 
         if dim == 3:
-            # check Pcurl
-            assert Pcurl, "For 3D case, Pcurl operator is needed!"
+            Pc = Pcurl(mesh)
 
             # change data type for the Pcurl matrix (to dCSRmat pointer)
-            Pcurl_ptr = PETSc_to_dCSRmat(Pcurl)
+            Pcurl_ptr = PETSc_to_dCSRmat(Pc)
 
             # set HX DIV preconditioner (NB: this sets up both data and fct)
             precond = haznics.create_precond_hxdiv_3D(Adiv_ptr, Pdiv_ptr,
@@ -340,133 +487,6 @@ class HXDiv(Precond):
                 precond.fct = haznics.precond_hx_div_additive_2D
             """
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
-
-
-# copied from block/algebraic/petsc/
-def discrete_gradient(mesh):
-    """ P1 to Ned1 map """
-    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
-    P1 = df.FunctionSpace(mesh, 'CG', 1)
-
-    return df.as_backend_type(df.DiscreteOperators.build_gradient(Ned, P1))
-
-
-def discrete_curl(mesh):
-    """ Ned1 to RT1 map """
-    assert mesh.geometry().dim() == 3
-    assert mesh.topology().dim() == 3
-
-    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
-    RT = df.FunctionSpace(mesh, 'RT', 1)
-
-    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
-    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
-
-    # Facets in terms of edges
-    mesh.init(2, 1)
-    f2e = mesh.topology()(2, 1)
-
-    rows = np.repeat(RT_f2dof, 3)
-    cols = Ned_e2dof[f2e()]
-    vals = np.tile(np.array([-2, 2, -2]), RT.dim())
-
-    Ccsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), Ned.dim()))
-
-    C = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
-                              size=Ccsr.shape,
-                              csr=(Ccsr.indptr, Ccsr.indices, Ccsr.data))
-
-    return df.PETScMatrix(C)
-
-
-# NB: this is only 3d!
-def Pdiv(mesh):
-    """ nodes to faces map """
-    RT = df.FunctionSpace(mesh, 'Raviart-Thomas', 1)
-    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
-
-    RT_f2dof = np.array(RT.dofmap().entity_dofs(mesh, 2))
-    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
-    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
-    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
-
-    # Facets in terms of nodes
-    mesh.init(2, 0)
-    f2n = mesh.topology()(2, 0)
-    coordinates = mesh.coordinates()
-
-    rows_x, rows_y, rows_z = np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3), np.repeat(RT_f2dof, 3)
-    cols_x, cols_y, cols_z = P1_n2dof_x[f2n()], P1_n2dof_y[f2n()], P1_n2dof_z[f2n()]
-    vals_x, vals_y, vals_z = np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim()), np.zeros(3 * RT.dim())
-
-    for facet, row in enumerate(RT_f2dof):
-        vertices = f2n(facet)
-        n1, n2, n3 = coordinates[vertices]
-
-        facet_normal = np.cross(n3 - n1, n2 - n1)
-
-        indices = np.arange(3) + 3 * facet
-        vals_x[indices] = facet_normal[0] / 3
-        vals_y[indices] = facet_normal[1] / 3
-        vals_z[indices] = facet_normal[2] / 3
-
-    rows = np.concatenate((rows_x, rows_y, rows_z))
-    cols = np.concatenate((cols_x, cols_y, cols_z))
-    vals = np.concatenate((vals_x, vals_y, vals_z))
-
-    # assemble Pdiv as from xyz components
-    Pdivcsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), P1.dim()))
-
-    Pdiv = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
-                                 size=Pdivcsr.shape,
-                                 csr=(Pdivcsr.indptr, Pdivcsr.indices, Pdivcsr.data))
-
-    return df.PETScMatrix(Pdiv)
-
-
-def Pcurl(mesh):
-    """ nodes to edges map """
-    assert mesh.geometry().dim() == 3
-    assert mesh.topology().dim() == 3
-
-    Ned = df.FunctionSpace(mesh, 'Nedelec 1st kind H(curl)', 1)
-    P1 = df.VectorFunctionSpace(mesh, 'CG', 1)
-
-    Ned_e2dof = np.array(Ned.dofmap().entity_dofs(mesh, 1))
-    P1_n2dof_x = np.array(P1.sub(0).dofmap().entity_dofs(mesh, 0))
-    P1_n2dof_y = np.array(P1.sub(1).dofmap().entity_dofs(mesh, 0))
-    P1_n2dof_z = np.array(P1.sub(2).dofmap().entity_dofs(mesh, 0))
-
-    # Facets in terms of edges
-    mesh.init(1, 0)
-    e2n = mesh.topology()(1, 0)
-    coordinates = mesh.coordinates()
-
-    rows_x, rows_y, rows_z = np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2), np.repeat(Ned_e2dof, 2)
-    cols_x, cols_y, cols_z = P1_n2dof_x[e2n()], P1_n2dof_y[e2n()], P1_n2dof_z[e2n()]
-    vals_x, vals_y, vals_z = np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim()), np.zeros(2 * Ned.dim())
-
-    for edge, row in enumerate(Ned_e2dof):
-        vertices = e2n(edge)
-        edge_tangent = coordinates[vertices[1]] - coordinates[vertices[0]]
-
-        indices = np.arange(2) + 2 * edge
-        vals_x[indices] = edge_tangent[0] / 2
-        vals_y[indices] = edge_tangent[1] / 2
-        vals_z[indices] = edge_tangent[2] / 2
-
-    rows = np.concatenate((rows_x, rows_y, rows_z))
-    cols = np.concatenate((cols_x, cols_y, cols_z))
-    vals = np.concatenate((vals_x, vals_y, vals_z))
-
-    # assemble Pcurl from xyz components
-    Pcurlcsr = csr_matrix((vals, (rows, cols)), shape=(Ned.dim(), P1.dim()))
-
-    Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
-                                  size=Pcurlcsr.shape,
-                                  csr=(Pcurlcsr.indptr, Pcurlcsr.indices, Pcurlcsr.data))
-
-    return df.PETScMatrix(Pcurl)
 
 
 # ----------------------------------- EOF ----------------------------------- #
