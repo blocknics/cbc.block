@@ -341,7 +341,6 @@ class HXCurl(Precond):
     """
     HX preconditioner from the HAZmath library for the curl-curl inner product
     NB! only for 3D problems
-    TODO: needs update and test
     """
 
     def __init__(self, Acurl, V, parameters=None):
@@ -381,20 +380,7 @@ class HXCurl(Precond):
         if not precond:
             raise RuntimeError(
                 "HXcurl data failed to set up (null pointer returned) ")
-        """
-        try:
-            prectype = parameters['prectype']
-        except KeyError:
-            prectype = ''
 
-        if prectype in ["add", "Add", "ADD", "additive", "ADDITIVE"]:
-            precond.fct = haznics.precond_hx_curl_additive
-        elif prectype in ["multi", "MULTI", "Multi", "multiplicative",
-                          "MULTIPLICATIVE"]:
-            precond.fct = haznics.precond_hx_curl_multiplicative
-        else:  # default is additive
-            precond.fct = haznics.precond_hx_curl_additive
-        """
         Precond.__init__(self, Acurl, "HXCurl_add", parameters, precond)
 
 
@@ -402,7 +388,6 @@ class HXDiv(Precond):
     """
     HX preconditioner from the HAZmath library for the div-div inner product
     NB! Pdiv only works for 3D problems
-    TODO: needs update and test
     """
 
     def __init__(self, Adiv, V, parameters=None):
@@ -456,18 +441,7 @@ class HXDiv(Precond):
             if not precond:
                 raise RuntimeError(
                     "HXdiv data failed to set up (null pointer returned) ")
-            """
-            if prectype in ["add", "Add", "ADD", "additive", "ADDITIVE"]:
-                precond.fct = haznics.precond_hx_div_additive
 
-            elif prectype in ["multi", "MULTI", "Multi", "multiplicative", 
-            "MULTIPLICATIVE"]:
-                precond.fct = haznics.precond_hx_div_multiplicative
-
-            else:
-                # default is additive
-                precond.fct = haznics.precond_hx_div_additive
-            """
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
 
         else:
@@ -480,17 +454,7 @@ class HXDiv(Precond):
             if not precond:
                 raise RuntimeError(
                     "HXdiv data failed to set up (null pointer returned) ")
-            """
-            if prectype in ["add", "Add", "ADD", "additive", "ADDITIVE"]:
-                precond.fct = haznics.precond_hx_div_additive_2D
 
-            elif prectype in ["multi", "MULTI", "Multi", "multiplicative", "MULTIPLICATIVE"]:
-                precond.fct = haznics.precond_hx_div_multiplicative_2D
-
-            else:
-                # default is additive
-                precond.fct = haznics.precond_hx_div_additive_2D
-            """
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
 
 

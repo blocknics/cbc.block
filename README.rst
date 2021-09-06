@@ -10,6 +10,13 @@
 
     AAprec = AA.scheme('gauss-seidel', inverse=ML)
 
+- Currently two packages of preconditioners are available: PETSc/Hypre and HAZmath::
+
+    from block.algebraic.petsc import ML
+    from block.algebraic.hazmath import AMG
+
+    AAprec = block_mat([[ML(A), 0], [ 0, AMG(D)]])
+
 - A good selection of iterative solvers::
 
     AAinv = SymmLQ(AA, precond=AAprec)
@@ -27,18 +34,19 @@
 
 There is no real documentation apart from the python doc-strings, but an
 (outdated) introduction is found in doc/blockdolfin.pdf. Familiarity with the
-DOLFIN python interface is required. For more details of use, I recommend
-looking at the demos (start with demo/mixedpoisson.py), and the comments
+DOLFIN python interface is required. Checkout also the
+publications below. For more details of use, we recommend
+looking at the demos (start with demo/poisson.py), and the comments
 therein.
 
 Bugs, questions, contributions: Visit http://bitbucket.org/fenics-apps/cbc.block.
 
-  The code is licensed under the GNU Lesser Public License, found in COPYING,
-  version 2.1 or later. Some files under block/iterative/ use the BSD license,
+  The code is licensed under the GNU General Public License, found in COPYING,
+  version 3 or later. Some files under block/iterative/ use the BSD license,
   this is noted in the individual files.
 
 
-Joachim Berdal Haga <jobh@simula.no>, March 2011.
+Contributors: Joachim Berdal Haga, Kent-Andre Mardal, Martin Sandve Alnæs, Magne Nordaas, Miroslav Kuchta, Cécile Daversin-Catty, Ana Budiša.
 
 Publications
 ------------
