@@ -25,7 +25,7 @@ def PETSc_to_dCSRmat(A):
     csr1 = petsc_mat.getValuesCSR()[1]
     csr2 = petsc_mat.getValuesCSR()[2]
 
-    return haznics.create_matrix(csr2, csr1, csr0)
+    return haznics.create_matrix2(csr2, csr1, csr0, A.size(1))
 
 
 # copied from block/algebraic/petsc/
