@@ -100,6 +100,7 @@ def Pdiv(mesh):
 
     # assemble Pdiv as from xyz components
     Pdivcsr = csr_matrix((vals, (rows, cols)), shape=(RT.dim(), P1.dim()))
+    Pdivcsr.eliminate_zeros()
 
     Pdiv = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
                                  size=Pdivcsr.shape,
@@ -135,9 +136,9 @@ def Pcurl(mesh):
         edge_tangent = coordinates[vertices[1]] - coordinates[vertices[0]]
 
         indices = np.arange(2) + 2 * edge
-        vals_x[indices] = edge_tangent[0] / 2
-        vals_y[indices] = edge_tangent[1] / 2
-        vals_z[indices] = edge_tangent[2] / 2
+        vals_x[indices] = 0.5 * edge_tangent[0]
+        vals_y[indices] = 0.5 * edge_tangent[1]
+        vals_z[indices] = 0.5 * edge_tangent[2]
 
     rows = np.concatenate((rows_x, rows_y, rows_z))
     cols = np.concatenate((cols_x, cols_y, cols_z))
@@ -145,6 +146,7 @@ def Pcurl(mesh):
 
     # assemble Pcurl from xyz components
     Pcurlcsr = csr_matrix((vals, (rows, cols)), shape=(Ned.dim(), P1.dim()))
+    Pcurlcsr.eliminate_zeros()
 
     Pcurl = PETSc.Mat().createAIJ(comm=df.MPI.comm_world,
                                   size=Pcurlcsr.shape,
@@ -339,7 +341,6 @@ class HXCurl(Precond):
     """
     HX preconditioner from the HAZmath library for the curl-curl inner product
     NB! only for 3D problems
-    TODO: needs update and test
     """
 
     def __init__(self, Acurl, V, parameters=None):
@@ -400,7 +401,6 @@ class HXDiv(Precond):
     """
     HX preconditioner from the HAZmath library for the div-div inner product
     NB! Pdiv only works for 3D problems
-    TODO: needs update and test
     """
 
     def __init__(self, Adiv, V, parameters=None):
