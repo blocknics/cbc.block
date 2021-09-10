@@ -176,38 +176,21 @@ def orthogonalize(v, basis):
 def rigid_body_modes(V, show_plot=False):
     """Compute orthogonal rigid body modes of a function space."""
     T = timer.time()
+
     mesh = V.mesh()
-    dim = mesh.geometry().dim()
-    x = SpatialCoordinate(mesh)
-    u = TrialFunction(V)
-    v = TestFunction(V)
-    modes = []
+    if mesh.geometry().dim() == 2:
+        modes = [Constant((1, 0)), Constant((0, 1)), Expression(('x[1]', '-x[0]'), degree=1)]
+    else:
+        translations = [Constant((1, 0, 0)), Constant((0, 1, 0)), Constant((0, 0, 1))]
+        rotations = [Expression(('0', 'x[2]', '-x[1]'), degree=1),
+                     Expression(('-x[2]', '0', 'x[0]'), degree=1),
+                     Expression(('x[1]', '-x[0]', '0'), degree=1)]
 
-    # Create integrator for whole mesh
-    mf0 = MeshFunction('size_t', mesh, 1, 0)
-    dx = Measure('dx', domain=mesh, subdomain_data=mf0)(0)
+        modes = translations + rotations
 
-    M_inv = KrylovSolver('cg', 'ilu')
-    M_inv.parameters['relative_tolerance']=1e-4
-    M_inv.set_operator(assemble(inner(u,v)*dx))
-    def proj(form, ortho_modes):
-        rhs = assemble(form)
-        lhs = rhs.copy()
-        M_inv.solve(lhs, rhs)
-        orthogonalize(lhs, ortho_modes)
-        lhs *= 1.0/lhs.norm('l2')
-        return lhs
-
-    # Translational modes
-    for i in range(dim):
-        modes.append(proj(v[i]*dx, []))
-
-    # Rotational modes; orthogonalize with respect to translations
-    if dim >= 2:
-        modes.append(proj((x[0]*v[1]-x[1]*v[0])*dx, modes[:dim]))
-    if dim == 3:
-        modes.append(proj((x[1]*v[2]-x[2]*v[1])*dx, modes[:dim]))
-        modes.append(proj((x[2]*v[0]-x[0]*v[2])*dx, modes[:dim]))
+    modes = [interpolate(m, V).vector() for m in modes]
+    basis = VectorSpaceBasis(modes)
+    basis.orthonormalize()
 
     if show_plot:
         for mode in modes:

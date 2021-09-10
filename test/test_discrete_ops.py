@@ -43,9 +43,5 @@ def test_curl():
     e = inner(curl(f_) - curl_f1, curl(f_) - curl_f1)*dx
     assert sqrt(abs(assemble(e))) < 1E-14
     
-    q = TestFunction(W)
-    n = FacetNormal(mesh)
-    x = assemble(inner(n('+'), q('+'))*dS + inner(n, q)*ds)
-
 test_grad()
 test_curl()
