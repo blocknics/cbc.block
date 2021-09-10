@@ -431,7 +431,7 @@ class HXDiv(Precond):
         try:
             dim = parameters['dim']
         except KeyError:
-            dim = 2
+            dim = 3
 
         # add or multi
         try:
