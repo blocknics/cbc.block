@@ -65,7 +65,7 @@ class block_container(block_base):
         import dolfin
         from .block_util import flatten
 
-        self.blocks = numpy.ndarray(mn, dtype=numpy.object)
+        self.blocks = numpy.ndarray(mn, dtype=object)
 
         # Hack: Set __len__ to a function always returning 0. This stops numpy
         # from requesting elements via __getitem__, which fails in parallel

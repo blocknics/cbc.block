@@ -28,12 +28,12 @@ from __future__ import print_function
 from dolfin import *
 from block import *
 from block.iterative import *
-from block.algebraic.petsc import *
+from block.algebraic.hazmath import AMG, HXCurl
 
 set_log_level(30)
 
 N = 4
-dim = 2
+dim = 3
 # Parse command-line arguments like "N=6"
 import sys
 for s in sys.argv[1:]:
@@ -62,8 +62,7 @@ b0 = assemble(inner(v, Constant((1, )*gdim))*dx)
 b1 = assemble(inner(q, Constant(2))*dx)
 bb = block_vec([b0, b1])
 
-# Note april-2014: PETSc-AMG fails -- AMG(E) not positive definite. Find appropriate smoother?
-prec = block_mat([[HypreAMS(A, V),  0  ],
+prec = block_mat([[HXCurl(A, V),  0  ],
                   [0,            AMG(E)]])
 AAinv = MinRes(AA, precond=prec, tolerance=1e-9, maxiter=2000, show=2)
 [Uh, Ph] = AAinv*bb

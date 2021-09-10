@@ -26,10 +26,10 @@ from __future__ import print_function
 
 from block import *
 from block.iterative import *
-from block.algebraic.petsc import AMG, HypreADS
+from block.algebraic.hazmath import AMG, HXDiv
 from dolfin import *
 
-n = 16
+n = 4
 # Create mesh
 mesh = UnitCubeMesh(n, n, n)
 
@@ -93,7 +93,7 @@ BB = block_assemble([[prec11, 0],
 bcs.apply(BB)
 
 # We invert the blocks by taylored multigrid
-M = HypreADS(A=BB[0][0], V=RT)
+M = HXDiv(BB[0][0], V=RT)
 N = AMG(BB[1][1])
 
 # Define the block preconditioner
