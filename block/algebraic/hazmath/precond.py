@@ -228,6 +228,9 @@ class Precond(block_base):
     def __str__(self):
         return '<%s prec of %s>' % (self.__class__.__name__, str(self.A))
 
+    def create_vec(self, dim=1):
+        return self.A.create_vec(dim)
+
 
 class AMG(Precond):
     """
