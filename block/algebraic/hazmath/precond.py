@@ -62,6 +62,9 @@ class Precond(block_base):
         # preconditioner type (string)
         self.prectype = prectype if prectype else "AMG"
 
+    def create_vec(self, dim):
+        return self.A.create_vec(dim)
+
     def matvec(self, b):
         from dolfin import GenericVector
         if not isinstance(b, GenericVector):
