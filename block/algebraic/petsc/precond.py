@@ -195,6 +195,23 @@ class SOR(precond):
         precond.__init__(self, A, PETSc.PC.Type.SOR, options, pdes, nullspace)
 
 
+class Elasticity(precond):
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
+
+        prefix = str(time())
+        A.down_cast().mat().setOptionsPrefix(prefix)
+        
+        options = {
+            'pc_mg_cycle_type': 'w',
+            'pc_mg_multiplicative_cycles': 2
+            }
+        options = {'_'.join([prefix, key]): val for key, val in options.items()}
+        print(options)
+        options.update(PETSc.Options().getAll())
+        if parameters:
+            options.update(parameters)
+        precond.__init__(self, A, PETSc.PC.Type.GAMG, options, pdes, nullspace)
+
 class ASM(precond):
     """
     Additive Scwharz Method.
