@@ -208,6 +208,8 @@ class Precond(block_base):
             return NotImplemented
 
         x = self.A.create_vec(dim=1)
+        x = df.Vector(df.MPI.comm_self, x.size())
+
         if len(x) != len(b):
             raise RuntimeError('incompatible dimensions for matvec, %d != %d'
                                % (len(x), len(b)))
@@ -218,7 +220,6 @@ class Precond(block_base):
 
         # apply the preconditioner (solution dx saved in x_np)
         haznics.apply_precond(b_np, x_np, self.precond)
-
         # convert dx to GenericVector
         x.set_local(x_np)
 
