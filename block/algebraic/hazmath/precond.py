@@ -185,7 +185,11 @@ class Precond(block_base):
             A_ptr = PETSc_to_dCSRmat(A)
 
             # initialize amg parameters (AMG_param pointer)
-            amgparam = haznics.amg_param_alloc(1)
+            amgparam = haznics.AMG_param()
+
+            # set extra amg parameters
+            if parameters:
+                haznics.param_amg_set_dict(parameters, amgparam)
 
             # print (relevant) amg parameters
             haznics.param_amg_print(amgparam)
