@@ -6,14 +6,13 @@ from block.object_pool import vec_pool
 from petsc4py import PETSc
 import dolfin as df
 import numpy as np
+from time import time
+from dolfin import info
 
 
 class precond(block_base):
     def __init__(self, A, prectype, parameters=None, pdes=1, nullspace=None):
-        from dolfin import info
-        from time import time
 
-        T = time()
         Ad = A.down_cast().mat()
 
         if nullspace:
@@ -41,9 +40,7 @@ class precond(block_base):
             for key,val in iter(list(parameters.items())):
                 PETSc.Options().setValue(key, val)
 
-        # Create preconditioner based on the options database
-        self.petsc_prec.setFromOptions()
-        self.petsc_prec.setUp()
+        self.is_setup = False
 
         # Reset the options database
         if parameters:
@@ -52,9 +49,17 @@ class precond(block_base):
             for key,val in iter(list(origOptions.items())):
                 PETSc.Options().setValue(key, val)
 
-        info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))
-
     def matvec(self, b):
+        # NOTE: we want to be lazy only setup when the action is needed
+        if not self.is_setup:
+            T = time()
+            # Create preconditioner based on the options database
+            self.petsc_prec.setFromOptions()
+            self.petsc_prec.setUp()
+            info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))
+
+            self.is_setup = True
+            
         from dolfin import GenericVector
         if not isinstance(b, GenericVector):
             return NotImplemented
@@ -104,15 +109,25 @@ class Cholesky(precond):
 
 class LU(precond):
     def __init__(self, A, parameters=None):
+        parameters = {} if parameters is None else parameters
         precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
 
-class MumpsSolver(LU):
+
+class MUMPS_LU(LU):
     def __init__(self, A, parameters=None):
         options = parameters.copy() if parameters else {}
         options['pc_factor_mat_solver_package'] = 'mumps'
         precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
 
 
+class SUPERLU_LU(LU):
+    def __init__(self, A, parameters=None):
+        options = parameters.copy() if parameters else {}
+        options['pc_factor_mat_solver_package'] = 'superlu'
+        precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
+        self.petsc_prec.setFactorPivot(1E-16)
+
+        
 class AMG(precond):
     """
     BoomerAMG preconditioner from the Hypre Library
@@ -179,6 +194,23 @@ class SOR(precond):
             options.update(parameters)
         precond.__init__(self, A, PETSc.PC.Type.SOR, options, pdes, nullspace)
 
+
+class Elasticity(precond):
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
+
+        prefix = str(time())
+        A.down_cast().mat().setOptionsPrefix(prefix)
+        
+        options = {
+            'pc_mg_cycle_type': 'w',
+            'pc_mg_multiplicative_cycles': 2
+            }
+        options = {'_'.join([prefix, key]): val for key, val in options.items()}
+        print(options)
+        options.update(PETSc.Options().getAll())
+        if parameters:
+            options.update(parameters)
+        precond.__init__(self, A, PETSc.PC.Type.GAMG, options, pdes, nullspace)
 
 class ASM(precond):
     """
