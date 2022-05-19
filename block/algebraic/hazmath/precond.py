@@ -1,4 +1,5 @@
 from block.block_base import block_base
+from block import block_mat
 from builtins import str
 from petsc4py import PETSc
 from scipy.sparse import csr_matrix
@@ -25,6 +26,28 @@ def PETSc_to_dCSRmat(A):
 
     return haznics.create_matrix(csr[2], csr[1], csr[0], A.size(1))
 
+
+def block_mat_to_block_dCSRmat(A):
+    """
+        Change data type for matrix
+        (block.block_mat to block_dCSRmat pointer)
+    """
+    # check type
+    assert isinstance(A, block_mat)
+
+    # allocate block_dCSRmat and its blocks too
+    brow, bcol = A.blocks.shape
+    Abdcsr = haznics.block_dCSRmat()
+    haznics.bdcsr_alloc(brow, bcol, Abdcsr)
+
+    for i in range(brow):
+        for j in range(bcol):
+            if isinstance(A[i][j], df.PETScMatrix):
+                csr = A[i][j].mat().getValuesCSR()
+                mat = haznics.create_matrix(csr[2], csr[1], csr[0], A[i][j].size(1))
+                Abdcsr.set(i, j, mat)  # todo: check this doesn't raise seg fault!
+
+    return Abdcsr
 
 # copied from block/algebraic/petsc/
 def discrete_gradient(mesh):
