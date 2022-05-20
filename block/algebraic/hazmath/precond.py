@@ -43,9 +43,9 @@ def block_mat_to_block_dCSRmat(A):
     for i in range(brow):
         for j in range(bcol):
             if isinstance(A[i][j], df.PETScMatrix):
-                csr = A[i][j].mat().getValuesCSR()
+                csr = A[i][j].mat().getValuesCSR()  # todo: eliminate zeros!
                 mat = haznics.create_matrix(csr[2], csr[1], csr[0], A[i][j].size(1))
-                Abdcsr.set(i, j, mat)  # todo: check this doesn't raise seg fault!
+                Abdcsr.set(i, j, mat)
 
     return Abdcsr
 
@@ -226,9 +226,6 @@ class Precond(block_base):
 
         # preconditioner type (string)
         self.prectype = prectype if prectype else "AMG"
-
-    def create_vec(self, dim):
-        return self.A.create_vec(dim)
 
     def matvec(self, b):
         if not isinstance(b, df.GenericVector):
