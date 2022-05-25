@@ -38,7 +38,7 @@ def block_mat_to_block_dCSRmat(A):
     # allocate block_dCSRmat and its blocks too
     brow, bcol = A.blocks.shape
     Abdcsr = haznics.block_dCSRmat()
-    haznics.bdcsr_alloc(brow, bcol, Abdcsr)
+    Abdcsr.init(brow, bcol)
 
     for i in range(brow):
         for j in range(bcol):
