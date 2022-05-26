@@ -42,6 +42,8 @@ def block_mat_to_block_dCSRmat(A):
 
     for i in range(brow):
         for j in range(bcol):
+            if isinstance(A[i][j], df.Matrix):
+                A[i][j] = df.as_backend_type(A[i][j])
             if isinstance(A[i][j], df.PETScMatrix):
                 csr = A[i][j].mat().getValuesCSR()  # todo: eliminate zeros!
                 mat = haznics.create_matrix(csr[2], csr[1], csr[0], A[i][j].size(1))
