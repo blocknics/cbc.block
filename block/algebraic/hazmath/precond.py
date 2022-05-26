@@ -46,6 +46,10 @@ def block_mat_to_block_dCSRmat(A):
                 csr = A[i][j].mat().getValuesCSR()  # todo: eliminate zeros!
                 mat = haznics.create_matrix(csr[2], csr[1], csr[0], A[i][j].size(1))
                 Abdcsr.set(i, j, mat)
+            if not A[i][j]:
+                mat = haznics.dCSRmat()
+                haznics.dcsr_null(mat)
+                Abdcsr.set(i, j, mat)
 
     return Abdcsr
 
