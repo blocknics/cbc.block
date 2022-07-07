@@ -315,7 +315,7 @@ class FAMG(Precond):
 
         # set extra amg parameters
         parameters = parameters if (parameters and isinstance(parameters, dict)) \
-            else {'fpwr': 0.5, 'smoother': 'fjacobi'}
+            else {'fpwr': 0.5, 'smoother': haznics.SMOOTHER_FJACOBI}
         haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
