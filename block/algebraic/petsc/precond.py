@@ -43,18 +43,23 @@ class precond(block_base):
                 # cmd line value takes priority
                 key not in keys and optsDB.setValue(key, val)
 
-        self.is_setup = False
+        self.setup_time = -1.
 
     def matvec(self, b):
         # NOTE: we want to be lazy only setup when the action is needed
-        if not self.is_setup:
+        if self.setup_time < 0:
             T = time()
             # Create preconditioner based on the options database
             self.petsc_prec.setFromOptions()
             self.petsc_prec.setUp()
-            info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))
 
-            self.is_setup = True
+            setup_time = time()-T
+            comm = self.petsc_prec.getComm().tompi4py()
+            
+            setup_time = comm.allreduce(setup_time)/comm.size
+            info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, setup_time))
+
+            self.setup_time = setup_time
             
         from dolfin import GenericVector
         if not isinstance(b, GenericVector):
