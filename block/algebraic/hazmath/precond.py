@@ -200,10 +200,10 @@ class Precond(block_base):
             if not precond:
                 raise RuntimeError(
                     "AMG levels failed to set up (null pointer returned) ")
-                    
-            # setup time
-            self.setup_time = precond.setup_time if precond.setup_time else 0.
-
+        
+        # setup time
+        self.setup_time = precond.setup_time if precond.setup_time else 0.
+        
         # preconditioner type (string)
         self.prectype = prectype if prectype else "AMG"
 
