@@ -34,31 +34,32 @@ class precond(block_base):
 #        self.petsc_prec.setOperators(Ad, Ad, PETSc.Mat.Structure.SAME_PRECONDITIONER)
         self.petsc_prec.setOperators(Ad, Ad) 
 
-        # Merge parameters into the options database
-        if parameters:
-            origOptions = PETSc.Options().getAll()
-            for key,val in iter(list(parameters.items())):
-                PETSc.Options().setValue(key, val)
+        # Set PETSc
+        optsDB = PETSc.Options()
+        keys = optsDB.getAll().keys()
 
-        self.is_setup = False
+        if parameters is not None:
+            for key, val in parameters.items():
+                # cmd line value takes priority
+                key not in keys and optsDB.setValue(key, val)
 
-        # Reset the options database
-        if parameters:
-            for key in iter(list(parameters.keys())):
-                PETSc.Options().delValue(key)
-            for key,val in iter(list(origOptions.items())):
-                PETSc.Options().setValue(key, val)
+        self.setup_time = -1.
 
     def matvec(self, b):
         # NOTE: we want to be lazy only setup when the action is needed
-        if not self.is_setup:
+        if self.setup_time < 0:
             T = time()
             # Create preconditioner based on the options database
             self.petsc_prec.setFromOptions()
             self.petsc_prec.setUp()
-            info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, time()-T))
 
-            self.is_setup = True
+            setup_time = time()-T
+            comm = self.petsc_prec.getComm().tompi4py()
+            
+            setup_time = comm.allreduce(setup_time)/comm.size
+            info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, setup_time))
+
+            self.setup_time = setup_time
             
         from dolfin import GenericVector
         if not isinstance(b, GenericVector):
@@ -94,9 +95,9 @@ class ML(precond):
             'mg_coarse_ksp_type': 'preonly',
             'mg_coarse_pc_type':  'lu',
             }
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
+
+        parameters is not None and options.update(parameters)
+        
         precond.__init__(self, A, PETSc.PC.Type.ML, options, pdes, nullspace)
 
 class ILU(precond):
@@ -170,9 +171,9 @@ class AMG(precond):
             #"pc_hypre_boomeramg_nodal_coarsen": "",
             #"pc_hypre_boomeramg_nodal_relaxation": "",
             }
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
+        # Overwrite our default by what user passed as args
+        parameters is not None and options.update(parameters)
+        
         precond.__init__(self, A, PETSc.PC.Type.HYPRE, options, pdes, nullspace)
 
 

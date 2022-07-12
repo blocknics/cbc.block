@@ -4,6 +4,7 @@ from builtins import range
 """Base class for iterative solvers."""
 
 from block.block_base import block_base
+import dolfin as df
 
 class iterative(block_base):
     def __init__(self, A, precond=1.0, tolerance=1e-5, initial_guess=None,
@@ -90,16 +91,19 @@ class iterative(block_base):
         else:
             msg = "NOT CONV."
 
-        self.cputime = time()-T
+        cputime = time()-T
+
+        comm = df.MPI.comm_world
+        # Get the average
+        self.cputime = comm.allreduce(cputime)/comm.size
         if self.show == 1:
             print('%s %s [iter=%2d, time=%.2fs, res=%.1e]' \
-                % (self.name, msg, self.iterations, time()-T, self.residuals[-1]))
+                % (self.name, msg, self.iterations, self.cputime, self.residuals[-1]))
         elif self.show >= 2:
             print('%s %s [iter=%2d, time=%.2fs, res=%.1e, true res=%.1e]' \
-                % (self.name, msg, self.iterations, time()-T, self.residuals[-1], (self.A*x-b).norm('l2')))
+                % (self.name, msg, self.iterations, self.cputime, self.residuals[-1], (self.A*x-b).norm('l2')))
         if self.show == 3:
-            from dolfin import MPI
-            if MPI.rank(MPI.comm_world) == 0:
+            if comm.rank == 0:
                 try:
                     from matplotlib import pyplot
                     pyplot.figure('%s convergence (show=3)'%self.name)
