@@ -36,8 +36,8 @@ def block_assemble(lhs, rhs=None, bcs=None,
     has_lhs = True if isinstance(rhs, ndarray) else rhs != None
 
     if symmetric:
-        from dolfin import MPI, mpi_comm_world
-        if MPI.size(mpi_comm_world()) > 1:
+        from dolfin import MPI
+        if MPI.size(MPI.comm_world) > 1:
             raise NotImplementedError(error_msg['mpi and symm'])
     if has_lhs and has_rhs:
         A, b = list(map(block_tensor,[lhs,rhs]))
@@ -130,12 +130,15 @@ def block_assemble(lhs, rhs=None, bcs=None,
     # Now apply boundary conditions.
     if b:
         b.allocate(A)
-    elif symmetric:
+        
+    if symmetric:
         # If we are preserving symmetry but don't have the rhs b,
         # then we need to store the symmetric corretions to b
         # as a matrix which we call A_mod
         b, A_mod = A.create_vec(), A.copy()
+        
     for i in range(n):
+        
         if bcs[i]:
             for bc in bcs[i]:
                 # Apply BCs to the diagonal block.
