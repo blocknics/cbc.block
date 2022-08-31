@@ -197,11 +197,12 @@ class Precond(block_base):
 
     """
 
-    def __init__(self, A, prectype=None, parameters=None, precond=None):
+    def __init__(self, A, prectype=None, parameters=None, amg_parameters=None, precond=None):
         # haznics.dCSRmat* type (assert?)
         self.A = A
         # python dictionary of parameters
-        self.parameters = parameters if parameters else {}
+        self.__parameters = parameters if parameters else {}
+        self.__amg_parameters = amg_parameters
 
         # init and set preconditioner (precond *)
         if precond:
@@ -224,6 +225,7 @@ class Precond(block_base):
 
             # print (relevant) amg parameters
             haznics.param_amg_print(amgparam)
+            self.__amg_parameters = amgparam
 
             self.precond = haznics.create_precond(A_ptr, amgparam)
 
@@ -270,6 +272,40 @@ class Precond(block_base):
     def create_vec(self, dim=1):
         return self.A.create_vec(dim)
 
+    def print_amg_parameters(self):
+        haznics.param_amg_print(self.__amg_parameters)
+
+    def print_all_parameters(self):
+        if self.prectype == "AMG":
+            self.print_amg_parameters()
+        elif self.prectype == "FAMG":
+            self.print_amg_parameters()
+            print("       Other parameters:")
+            print("-----------------------------------------------")
+            print("Fractional exponent:               ", self.__parameters['fpwr']) if self.__parameters['fpwr'] \
+                else print()
+            print("-----------------------------------------------")
+        elif self.prectype == "RA":
+            print("       Other parameters:")
+            print("-----------------------------------------------")
+            print("Fractional exponents:              ", self.__parameters['pwrs']) if self.__parameters['pwrs'] \
+                else print()
+            print("Fractional weights:                ", self.__parameters['coefs']) if self.__parameters['coefs'] \
+                else print()
+            print("-----------------------------------------------")
+        elif self.prectype == "HXCurl_add":
+            print("       Other parameters:")
+            print("-----------------------------------------------")
+            print("HXCurl type:                       ", "Additive") if self.__parameters['prectype'] else print()
+            print("-----------------------------------------------")
+        elif self.prectype == "HXDiv_add":
+            print("       Other parameters:")
+            print("-----------------------------------------------")
+            print("HXDiv type:                        ", "Additive") if self.__parameters['prectype'] else print()
+            print("-----------------------------------------------")
+        else:
+            NotImplemented
+
 
 class AMG(Precond):
     """
@@ -299,7 +335,7 @@ class AMG(Precond):
             raise RuntimeError(
                 "AMG levels failed to set up (null pointer returned) ")
 
-        Precond.__init__(self, A, "AMG", parameters, precond)
+        Precond.__init__(self, A, "AMG", parameters, amgparam, precond)
 
 
 class FAMG(Precond):
@@ -332,7 +368,7 @@ class FAMG(Precond):
             raise RuntimeError(
                 "FAMG levels failed to set up (null pointer returned) ")
 
-        Precond.__init__(self, A, "FAMG", parameters, precond)
+        Precond.__init__(self, A, "FAMG", parameters, amgparam, precond)
 
 
 class RA(Precond):
@@ -376,7 +412,7 @@ class RA(Precond):
                 "Rational Approximation data failed to set up (null pointer "
                 "returned) ")
 
-        Precond.__init__(self, A, "RA", parameters, precond)
+        Precond.__init__(self, A, "RA", parameters, amgparam, precond)
 
 
 class HXCurl(Precond):
@@ -436,7 +472,7 @@ class HXCurl(Precond):
         else:  # default is additive
             precond.fct = haznics.precond_hx_curl_additive
         """
-        Precond.__init__(self, Acurl, "HXCurl_add", parameters, precond)
+        Precond.__init__(self, Acurl, "HXCurl_add", parameters, amgparam, precond)
 
 
 class HXDiv(Precond):
@@ -531,7 +567,7 @@ class HXDiv(Precond):
                 # default is additive
                 precond.fct = haznics.precond_hx_div_additive_2D
             """
-            Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
+            Precond.__init__(self, Adiv, "HXDiv_add", parameters, amgparam, precond)
 
 
 # ----------------------------------- EOF ----------------------------------- #
