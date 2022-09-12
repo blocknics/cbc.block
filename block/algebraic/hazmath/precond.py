@@ -544,7 +544,7 @@ class HXDiv(Precond):
                 # default is additive
                 precond.fct = haznics.precond_hx_div_additive
             """
-            Precond.__init__(self, Adiv, "HXDiv_add", parameters, precond)
+            Precond.__init__(self, Adiv, "HXDiv_add", parameters, amgparam, precond)
 
         else:
             # set HX DIV preconditioner (NB: this sets up both data and fct)
