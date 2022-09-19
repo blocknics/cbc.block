@@ -80,3 +80,10 @@ def test_Pdiv():
 
     e = inner(u1_int - u2, u1_int - u2) * dx
     assert sqrt(abs(assemble(e))) < 1E-14
+
+
+if __name__ == "__main__" :
+    for func in [test_Pdiv, test_Pcurl, test_curl, test_grad]:
+        print("Testing %s ..." % func.__name__)
+        func()
+        print("Done.")
