@@ -441,6 +441,8 @@ class HXCurl(Precond):
         else:
             parameters = {'prectype': haznics.PREC_HX_CURL_A}
 
+        # make sure coarse solver is always iterative
+        amgparam.coarse_solver = 0
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
 
@@ -502,6 +504,8 @@ class HXDiv(Precond):
             parameters = {'dim': mesh.topology().dim(),
                           'prectype': haznics.PREC_HX_DIV_A}
 
+        # make sure coarse solver is always iterative
+        amgparam.coarse_solver = 0
         # print (relevant) amg parameters
         haznics.param_amg_print(amgparam)
 
