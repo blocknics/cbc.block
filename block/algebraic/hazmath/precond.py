@@ -574,4 +574,40 @@ class HXDiv(Precond):
             Precond.__init__(self, Adiv, "HXDiv_add", parameters, amgparam, precond)
 
 
+class metricAMG(Precond):
+    """
+    metric AMG preconditioner from the HAZmath Library with SWIG
+
+    """
+    def __init__(self, A, V, idofs, parameters=None):
+        # change data type for the matrix (to dCSRmat pointer)
+        A_ptr = PETSc_to_dCSRmat(A)
+        interface_dofs = haznics.create_ivector(idofs)
+
+        # initialize amg parameters (AMG_param pointer)
+        amgparam = haznics.AMG_param()
+
+        # set extra amg parameters
+        if parameters:
+            haznics.param_amg_set_dict(parameters, amgparam)
+        # print (relevant) amg parameters
+        haznics.param_amg_print(amgparam)
+
+        # precond type
+        try:
+            prectype = parameters['prectype']
+        except KeyError:
+            prectype = 14
+
+        # set AMG preconditioner
+        precond = haznics.create_precond_metric_amg(A_ptr, interface_dofs, prectype, amgparam)
+
+        # if fail, setup returns null
+        if not precond:
+            raise RuntimeError(
+                "AMG levels failed to set up (null pointer returned) ")
+
+        Precond.__init__(self, A, "AMG", parameters, amgparam, precond)
+
+
 # ----------------------------------- EOF ----------------------------------- #
