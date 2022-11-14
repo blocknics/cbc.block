@@ -285,6 +285,13 @@ class Precond(block_base):
             print("Fractional exponent:               ", self.__parameters['fpwr']) if self.__parameters['fpwr'] \
                 else print()
             print("-----------------------------------------------")
+        elif self.prectype == "metricAMG":
+            self.print_amg_parameters()
+            print("       Other parameters:")
+            print("-----------------------------------------------")
+            print("Metric precond type:               ", self.__parameters['prectype']) if self.__parameters['prectype'] \
+                else print()
+            print("-----------------------------------------------")
         elif self.prectype == "RA":
             print("       Other parameters:")
             print("-----------------------------------------------")
@@ -607,7 +614,7 @@ class metricAMG(Precond):
             raise RuntimeError(
                 "AMG levels failed to set up (null pointer returned) ")
 
-        Precond.__init__(self, A, "AMG", parameters, amgparam, precond)
+        Precond.__init__(self, A, "metricAMG", parameters, amgparam, precond)
 
 
 # ----------------------------------- EOF ----------------------------------- #
