@@ -254,11 +254,15 @@ class Precond(block_base):
         # convert rhs and dx to numpy arrays
         b_np = b[:]
         x_np = x[:]
+        # print("Rhs size ", b_np.shape, ": \n", b_np)
+        # print("Lhs before size", x_np.shape, ": \n", x_np)
 
         # apply the preconditioner (solution dx saved in x_np)
         haznics.apply_precond(b_np, x_np, self.precond)
+        # print("Lhs after size ", x_np.shape, ": \n", x_np)
         # convert dx to GenericVector
         x.set_local(x_np)
+        # print("Norm: ", x.norm('l2'))
 
         return x
 
@@ -586,10 +590,11 @@ class metricAMG(Precond):
     metric AMG preconditioner from the HAZmath Library with SWIG
 
     """
-    def __init__(self, A, V, idofs, parameters=None):
+    def __init__(self, A, V, Ablock, idofs=None, parameters=None):
         # change data type for the matrix (to dCSRmat pointer)
-        A_ptr = PETSc_to_dCSRmat(A)
-        interface_dofs = haznics.create_ivector(idofs)
+        Ablock_ptr = block_mat_to_block_dCSRmat(Ablock)
+        if idofs:
+            idofs = haznics.create_ivector(idofs)
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.AMG_param()
@@ -607,7 +612,7 @@ class metricAMG(Precond):
             prectype = 14
 
         # set AMG preconditioner
-        precond = haznics.create_precond_metric_amg(A_ptr, interface_dofs, prectype, amgparam)
+        precond = haznics.create_precond_metric_amg(Ablock_ptr, idofs, prectype, amgparam)
 
         # if fail, setup returns null
         if not precond:
