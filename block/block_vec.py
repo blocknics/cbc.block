@@ -83,12 +83,16 @@ class block_vec(block_container):
     # Map operator on the block_vec to operators on the individual blocks.
     #
 
-    def _map_operator(self, operator, inplace=False):
-        y = block_vec(len(self))
+    def _map_operator(self, operator, inplace=False, args_fn=lambda i: ()):
+        y = self if inplace else block_vec(len(self))
         for i in range(len(self)):
             try:
-                y[i] = getattr(self[i], operator)()
-            except (Exception, e):
+                v = getattr(self[i], operator)(*args_fn(i))
+                if isinstance(v, type(NotImplemented)):
+                    raise NotImplementedError()
+                if not inplace:
+                    y[i] = v
+            except Exception as e:
                 if i==0 or not inplace:
                     raise e
                 else:
@@ -97,34 +101,10 @@ class block_vec(block_container):
         return y
 
     def _map_scalar_operator(self, operator, x, inplace=False):
-        try:
-            x = float(x)
-        except:
-            return NotImplemented
-        y = self if inplace else block_vec(len(self))
-        for i in range(len(self)):
-            v = getattr(self[i], operator)(x)
-            if isinstance(v, type(NotImplemented)):
-                if i==0 or not inplace:
-                    return NotImplemented
-                else:
-                    raise RuntimeError(
-                        "operator partially applied, block %d does not support '%s'" % (i, operator))
-            y[i] = v
-        return y
+        return self._map_operator(operator, args_fn=lambda i: (float(x),), inplace=inplace)
 
     def _map_vector_operator(self, operator, x, inplace=False):
-        y = self if inplace else block_vec(len(self))
-        for i in range(len(self)):
-            v = getattr(self[i], operator)(x[i])
-            if isinstance(v, type(NotImplemented)):
-                if i==0 or not inplace:
-                    return NotImplemented
-                else:
-                    raise RuntimeError(
-                        "operator partially applied, block %d does not support '%s'" % (i, operator))
-            y[i] = v
-        return y
+        return self._map_operator(operator, args_fn=lambda i: (x[i],), inplace=inplace)
 
     def _map_any_operator(self, operator, x, inplace=False):
         if hasattr(x, '__iter__'):
@@ -139,26 +119,22 @@ class block_vec(block_container):
         for i in range(m):
             y[i] = block_util.copy(self[i])
         return y
-    
-    def zero(self): return self._map_operator('zero', True)
+
+    def zero(self): return self._map_operator('zero', inplace=True)
 
     def __add__ (self, x): return self._map_vector_operator('__add__',  x)
     def __radd__(self, x): return self._map_vector_operator('__radd__', x)
-    def __iadd__(self, x): return self._map_vector_operator('__iadd__', x, True)
+    def __iadd__(self, x): return self._map_vector_operator('__iadd__', x, inplace=True)
 
     def __sub__ (self, x): return self._map_any_operator('__sub__',  x)
     def __rsub__(self, x): return self._map_vector_operator('__rsub__', x)
-    def __isub__(self, x): return self._map_vector_operator('__isub__', x, True)
+    def __isub__(self, x): return self._map_vector_operator('__isub__', x, inplace=True)
 
     def __mul__ (self, x): return self._map_scalar_operator('__mul__',  x)
     def __rmul__(self, x): return self._map_scalar_operator('__rmul__', x)
-    def __imul__(self, x): return self._map_scalar_operator('__imul__', x, True)
+    def __imul__(self, x): return self._map_scalar_operator('__imul__', x, inplace=True)
 
-    def inner(self, x):
-        y = self._map_vector_operator('inner', x)
-        if isinstance(y, type(NotImplemented)):
-            raise NotImplementedError('One or more blocks do not implement .inner()')
-        return sum(y)
+    def inner(self, x): return sum(self._map_vector_operator('inner', x))
 
     def get_local(self):    return self._map_operator('get_local')
     def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)
