@@ -1,9 +1,5 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
 from .block_base import block_container
+import numpy as np
 
 class block_vec(block_container):
     """Class defining a block vector suitable for multiplication with a
