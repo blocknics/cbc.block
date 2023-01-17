@@ -80,18 +80,9 @@ class block_vec(block_container):
                 ran -= MPI.sum(self[i].mpi_comm(), sum(ran))/MPI.sum(len(ran))
                 self[i][:] = ran
             else:
-                raise RuntimeError(
-                    'block %d in block_vec has no size -- use a proper vector or call allocate(A)' % i)
+                raise ValueError(
+                    f'block {i} in block_vec has no size -- use a proper vector or call allocate(A, dim=d)')
 
-    def apply_bc(self, bcs):
-        """Apply Dirichlet boundary conditions, in a time loop for example,
-        when boundary conditions change. If the original vector was modified
-        for symmetry, it will remain so (since the BC dofs are not changed by
-        symmetry), but if any vectors have been individually reassembled then
-        it needs careful thought. It is probably better to just reassemble the
-        whole block_vec using block_assemble()."""
-        from .block_util import create_vec_from, wrap_in_list
-        from dolfin import GenericVector
         for i in range(len(self)):
             if not isinstance(self[i], GenericVector):
                 vec = create_vec_from(bcs[i])
