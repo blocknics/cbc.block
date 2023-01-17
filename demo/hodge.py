@@ -29,6 +29,7 @@ from dolfin import *
 from block import *
 from block.iterative import *
 from block.algebraic.hazmath import AMG, HXCurl
+import os
 
 set_log_level(30)
 
@@ -67,7 +68,7 @@ prec = block_mat([[HXCurl(A, V),  0  ],
 AAinv = MinRes(AA, precond=prec, tolerance=1e-9, maxiter=2000, show=2)
 [Uh, Ph] = AAinv*bb
 
-if MPI.size(mesh.mpi_comm()) == 1 and gdim == 2:
+if MPI.size(mesh.mpi_comm()) == 1 and gdim == 2 and not 'DOLFIN_NOPLOT' in os.environ:
     import matplotlib.pyplot as plt
 
     plt.subplot(121)

@@ -28,6 +28,7 @@ from block import *
 from block.iterative import *
 from block.algebraic.petsc import AMG, HypreAMS
 from dolfin import *
+import os
 
 # Create mesh
 mesh = UnitSquareMesh(64, 64)
@@ -110,7 +111,7 @@ print(('norm Sigma:', Sigma.norm('l2')))
 print(('norm U    :', U.norm('l2')))
 
 # Plot sigma and u
-if MPI.size(mesh.mpi_comm()) == 1:
+if MPI.size(mesh.mpi_comm()) == 1 and not 'DOLFIN_NOPLOT' in os.environ:
     import matplotlib.pyplot as plt
 
     plt.subplot(121)
