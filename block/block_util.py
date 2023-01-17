@@ -69,8 +69,10 @@ def block_tensor(obj):
     else:
         raise RuntimeError("Not able to create block container of rank %d"%len(blocks.shape))
 
-def _create_vec(template):
+def _create_vec(template, dim):
     from dolfin import DirichletBC, FunctionSpace, Function
+    if dim is not None and hasattr(template, 'create_vec'):
+        return template.create_vec(dim)
     if isinstance(template, DirichletBC):
         V = FunctionSpace(template.function_space())
     elif isinstance(template, FunctionSpace):
@@ -81,15 +83,17 @@ def _create_vec(template):
         return None
     return Function(V).vector()
 
-def create_vec_from(templates):
-    """Try to create a dolfin vector from a (list of) templates. A template is
+def create_vec_from(templates, dim=None):
+    """Try to create a dolfin vector from a (list of) templates.  A template is
     anything that we can retrieve a function space from (currently a
-    FunctionSpace or a DirichletBC)."""
+    FunctionSpace or a DirichletBC), or anything with a create_vec method (if
+    dim is set).
+    """
     for template in wrap_in_list(templates):
-        v = _create_vec(template)
+        v = _create_vec(template, dim)
         if v:
             return v
-    raise RuntimeError("Unable to create vector from template")
+    raise ValueError("Unable to create vector from template")
 
 def wrap_in_list(obj, types=object):
     """Make the argument into a list, suitable for iterating over. If it is

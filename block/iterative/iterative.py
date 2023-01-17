@@ -44,12 +44,12 @@ class iterative(block_base):
         # scalars (although they are normally converted to vectors by bc
         # application). To be sure, call allocate() on them.
 
-        if isinstance(b, block_vec):
+        if isinstance(b, block_vec) and not b.allocated():
             # Create a shallow copy to call allocate() on, to avoid changing the caller's copy of b
             b = block_vec(len(b), b.blocks)
             b.allocate(self.A, dim=0)
 
-        if self.initial_guess:
+        if self.initial_guess is not None:
             # Most (all?) solvers modify x, so make a copy to avoid changing
             # the caller's copy of x
             from block.block_util import copy
