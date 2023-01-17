@@ -18,6 +18,12 @@ class block_bc(list):
         self.symmetric = symmetric
 
     def apply(self, A):
+        """
+        Apply BCs to a block_mat LHS, and return an object which modifies the
+        corresponding block_vec RHS.  Typical use:
+
+        b_bcs = A_bcs.apply(A); b_bcs.apply(b)
+        """
         if not isinstance(A, block_mat):
             raise RuntimeError('A is not a block matrix')
 
@@ -60,21 +66,19 @@ class block_rhs_bc(list):
         self.A = A;
 
     def apply(self, b):
+        """Apply Dirichlet boundary conditions, in a time loop for example,
+        when boundary conditions change. If the original vector was modified
+        for symmetry, it will remain so (since the BC dofs are not changed by
+        symmetry), but if any vectors have been individually reassembled then
+        it needs careful thought. It is probably better to just reassemble the
+        whole block_vec using block_assemble()."""
         if not isinstance(b, block_vec):
             raise RuntimeError('not a block vector')
 
         if self.A is not None:
             b.allocate(self.A, dim=0)
         else:
-            from .block_util import isscalar, _create_vec
-            for i,bcs in enumerate(self):
-                for bc in bcs:
-                    if isscalar(b[i]) and b[i] == 0.0:
-                        v = _create_vec(bc)
-                        if v is not None:
-                            v.zero()
-                            b[i] = v
-
+            b.allocate(self)
 
         if self.A is not None:
             # First, collect a vector containing all non-zero BCs. These are required for
