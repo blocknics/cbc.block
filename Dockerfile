@@ -1,19 +1,16 @@
 # Base image
-FROM quay.io/fenicsproject/dev
+FROM quay.io/fenicsproject/dev:latest
 
-ENV PYTHONPATH=""
-
-USER fenics
-
-RUN git clone https://github.com/pyamg/pyamg.git && \
-    cd pyamg && \
-    python3 setup.py install --user && \
-    cd ..
+#RUN wget https://api.github.com/repos/pyamg/pyamg/tarball/v4.2.3 -O pyamg.tgz \
+#    && tar xf pyamg.tgz \
+#    && cd pyamg-pyamg-*/ \
+#    && python3 -m pip install --user --upgrade pybind11 \
+#    && python3 setup.py install --user
 
 # cbc.block
-RUN git clone https://mirok-w-simula@bitbucket.org/mirok-w-simula/cbc.block.git && \
-    cd cbc.block && \
-    python3 setup.py install --user && \
-    cd ..
+COPY . .
+RUN python3 setup.py install
 
-USER root
+# OR to run "in-place":
+#
+# docker run -it --rm -u $(id -u):$(id -g) -v /root:$PWD dolfinx/dolfinx python3 demo/mixedpoission.py

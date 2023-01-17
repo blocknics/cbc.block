@@ -22,9 +22,14 @@ def PETSc_to_dCSRmat(A):
     petsc_mat = A.mat()
 
     # NB! store copies for now
-    csr = petsc_mat.getValuesCSR()
+    col_index, row_index, values = petsc_mat.getValuesCSR()
 
-    return haznics.create_matrix(csr[2], csr[1], csr[0], A.size(1))
+    n, m = petsc_mat.getLocalSize()
+    r0, r1 = petsc_mat.getOwnershipRange()
+    c0, c1 = petsc_mat.getOwnershipRangeColumn()
+    if r0 != 0 or c0 != 0 or r1 != n or c1 != m:
+        raise ValueError("Local matrix needs fixing")
+    return haznics.create_matrix(values, row_index, col_index, m)
 
 
 def block_mat_to_block_dCSRmat(A):
@@ -231,20 +236,15 @@ class Precond(block_base):
         if not isinstance(b, df.GenericVector):
             return NotImplemented
 
-        x = self.A.create_vec(dim=1)
-        x = df.Vector(df.MPI.comm_self, x.size())
-
-        if len(x) != len(b):
-            raise RuntimeError('incompatible dimensions for matvec, %d != %d'
-                               % (len(x), len(b)))
-
         # convert rhs and dx to numpy arrays
         b_np = b[:]
-        x_np = x[:]
+        x_np = np.empty_like(b)
 
         # apply the preconditioner (solution dx saved in x_np)
         haznics.apply_precond(b_np, x_np, self.precond)
+
         # convert dx to GenericVector
+        x = self.A.create_vec(dim=1)
         x.set_local(x_np)
 
         return x
@@ -269,6 +269,8 @@ class AMG(Precond):
     def __init__(self, A, parameters=None):
         # change data type for the matrix (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
+        if A_ptr.col != A_ptr.row:
+            raise ValueError("dCSR matrix is not square")
 
         # initialize amg parameters (AMG_param pointer)
         amgparam = haznics.AMG_param()

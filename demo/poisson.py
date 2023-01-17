@@ -1,13 +1,14 @@
 from block import *
 from block.iterative import *
+from block.algebraic.petsc import AMG as hypreAMG
 from block.algebraic.hazmath import AMG as hazAMG
 from dolfin import *
 from block.dolfin_util import *
-import numpy
+import numpy as np
 
 # Function spaces, elements
 
-mesh = UnitSquareMesh(16,16)
+mesh = UnitSquareMesh(32,32)
 
 V = FunctionSpace(mesh, "CG", 1)
 
@@ -21,13 +22,18 @@ A = assemble(a)
 b = assemble(L)
 
 # to do hypre AMG
-# B = AMG(A)
+#B = hypreAMG(A)
 # here we use hazmath AMG:
 B = hazAMG(A)
 
-Ainv = ConjGrad(A, precond=B, tolerance=1e-10, show=2)
+Ainv = ConjGrad(A, precond=B, tolerance=1e-13, show=0)
 
-x = Ainv*b
+x = Ainv(show=2)*b
+
+import timeit
+times = timeit.repeat("Ainv.create_vec()", repeat=15, number=1000000, globals=globals())
+times = sorted(times, reverse=True)[:5]
+print(f'ms mean: {np.mean(times):.2f} stddev: {np.std(times):.2f}')
 
 u = Function(V)
 u.vector()[:] = x[:]
