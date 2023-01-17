@@ -11,7 +11,7 @@ mesh = UnitSquareMesh(16,16)
 
 V = FunctionSpace(mesh, "CG", 1)
 
-f = Expression("sin(3.14*x[0])", degree=2)
+f = Expression("sin(pi*x[0])", degree=2)
 u, v = TrialFunction(V), TestFunction(V)
 
 a = u*v*dx + dot(grad(u), grad(v))*dx
@@ -32,10 +32,10 @@ x = Ainv*b
 u = Function(V)
 u.vector()[:] = x[:]
 
-# default solver in Dolfin 
+# default solver in Dolfin
 u2 = Function(V)
 solve(A, u2.vector(), b)
 
-print ("Max differences between the two solutions: ", (u.vector()-u2.vector()).max()) 
+print ("Max differences between the two solutions: ", (u.vector()-u2.vector()).norm("linf"))
 
 
