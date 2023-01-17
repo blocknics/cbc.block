@@ -34,7 +34,7 @@ def shared_vec_pool(func):
         vec = vec_pool.get()
         if vec is None:
             vec = func(self, dim)
-            pool.add(vec)
+            vec_pool.add(vec)
         return vec
     pooled_create_vec.__doc__ = func.__doc__
     return pooled_create_vec
