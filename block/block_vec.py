@@ -79,14 +79,6 @@ class block_vec(block_container):
                 raise ValueError(
                     f'block {i} in block_vec has no size -- use a proper vector or call allocate(A, dim=d)')
 
-        for i in range(len(self)):
-            if not isinstance(self[i], GenericVector):
-                vec = create_vec_from(bcs[i])
-                vec[:] = self[i]
-                self[i] = vec
-            for bc in wrap_in_list(bcs[i]):
-                bc.apply(self[i])
-
     #
     # Map operator on the block_vec to operators on the individual blocks.
     #
