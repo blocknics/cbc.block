@@ -174,3 +174,6 @@ class block_vec(block_container):
         if isinstance(y, type(NotImplemented)):
             raise NotImplementedError('One or more blocks do not implement .inner()')
         return sum(y)
+
+    def get_local(self):    return self._map_operator('get_local')
+    def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)
