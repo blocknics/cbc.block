@@ -182,3 +182,6 @@ while t <= T:
     p_prev.vector()[:] = P
     t += float(dt)
 print ("Finished normally")
+
+from block.testing import check_expected
+check_expected('x', x, show=False)

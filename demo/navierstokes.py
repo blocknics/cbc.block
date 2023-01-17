@@ -80,8 +80,9 @@ AAinv = LGMRES(AA, precond=prec, tolerance=1e-5, maxiter=50, show=2)
 # Compute solution
 u, p = AAinv * bb
 
-print("Norm of velocity coefficient vector: %.15g" % u.norm("l2"))
-print("Norm of pressure coefficient vector: %.15g" % p.norm("l2"))
+from block.testing import check_expected
+check_expected('velocity coefficient vector', u)
+check_expected('pressure coefficient vector', p)
 
 # Plot solution
 plot(Function(V, u))

@@ -130,3 +130,6 @@ class block_vec(block_container):
     def __imul__(self, x): return self._map_scalar_operator('__imul__', x, inplace=True)
 
     def inner(self, x): return sum(self._map_vector_operator('inner', x))
+
+    def get_local(self):    return self._map_operator('get_local')
+    def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)

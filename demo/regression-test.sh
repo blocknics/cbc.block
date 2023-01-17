@@ -7,6 +7,7 @@
 
 set -e
 export DOLFIN_NOPLOT=1
+export BLOCK_REGRESSION_ABORT=1
 
 cd ${0%/*}
 demos=$(find . -name \*.py)
