@@ -144,13 +144,8 @@ AAinv = MinRes(AA, precond=AAp, show=2, name='AA^')
 Sigma, U = AAinv * bb
 #=====================
 
-# Print norms that can be compared with those reported by demo-parallelmixedpoisson
-print(('norm Sigma:', Sigma.norm('l2')))
-print(('norm U    :', U.norm('l2')))
-
-# Check that the norms are as expected
-if abs(1.213-Sigma.norm('l2')) > 1e-3 or abs(6.716-U.norm('l2')) > 1e-3:
-    raise RuntimeError("Wrong value in norms -- please check!")
+check_expected('Sigma', Sigma, show=True)
+check_expected('U', U, show=True)
 
 # Plot sigma and u
 if MPI.size(mesh.mpi_comm()) == 1:

@@ -74,12 +74,13 @@ prec = block_mat([[PP11, 0],
 # Create the block inverse, using the preconditioned Minimum Residual method
 # (suitable for symmetric indefinite problems).
 
-xx = AA.create_vec() 
+xx = AA.create_vec()
 xx.randomize()
 
-AAinv = MinRes(AA, precond=prec, initial_guess=xx, tolerance=1e-4, maxiter=500, show=2)
+AAinv = MinRes(AA, precond=prec, initial_guess=xx, tolerance=1e-8, maxiter=500, show=2)
 
 # Compute solution
 u, p = AAinv * bb
 
-
+check_expected('u', u, rtol=1e-4, show=True)
+check_expected('p', p, rtol=1e-5, show=True)

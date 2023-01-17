@@ -18,6 +18,7 @@ from .block_transform import block_kronecker, block_simplify, block_collapse
 from .block_assemble import block_assemble, block_symmetric_assemble
 from .block_bc import block_bc
 from .block_util import issymmetric
+from .testing import check_expected
 
 def _init():
     import dolfin
