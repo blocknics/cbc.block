@@ -19,7 +19,7 @@ class block_vec(block_container):
         from dolfin import GenericVector
         return all(isinstance(block, GenericVector) for block in self)
 
-    def allocate(self, template, dim=None):
+    def allocate(self, template, dim=None, alternative_templates=[]):
         """Make sure all blocks are proper vectors. Any non-vector blocks are
         replaced with appropriately sized vectors (where the sizes are taken
         from the template, which should be a block_mat or a list of
@@ -35,8 +35,13 @@ class block_vec(block_container):
             val = self[i]
             try:
                 self[i] = create_vec_from(template[:,i] if dim==1 else template[i], dim)
-            except ValueError:
-                pass
+            except Exception:
+                for tmpl in alternative_templates:
+                    try:
+                        self[i] = create_vec_from(tmpl[:,i] if dim==1 else tmpl[i], dim)
+                        break
+                    except Exception:
+                        pass
             if not isinstance(self[i], GenericVector):
                 raise ValueError(
                     f"Can't allocate vector - no usable template for block {i}.\n"
