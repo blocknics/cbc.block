@@ -1,21 +1,32 @@
-from __future__ import division
-from builtins import range
 import dolfin
 from .block_mat import block_mat
 from .block_vec import block_vec
+from .block_util import wrap_in_list
+from .splitting import split_bcs
+import itertools
 import numpy
 
-class block_bc(list):
+class block_bc:
     """This class applies Dirichlet BCs to a block matrix. It is not a block operator itself."""
-    def __init__(self, lst, symmetric):
-        list.__init__(self, lst)
+    def __init__(self, bcs, symmetric=False, signs=None, subspace_bcs=None):
         # Clean up self, and check arguments
-        for i in range(len(self)):
-            if self[i] is None:
-                self[i] = []
-            elif not hasattr(self[i], '__iter__'):
-                self[i] = [self[i]]
         self.symmetric = symmetric
+        bcs = [wrap_in_list(bc) for bc in bcs]
+        if subspace_bcs is not None:
+            subspace_bcs = split_bcs(subspace_bcs, None)
+            combined_bcs = []
+            for ss,ns in itertools.zip_longest(subspace_bcs, bcs):
+                combined_bcs.append([])
+                if ns is not None: combined_bcs[-1] += ns
+                if ss is not None: combined_bcs[-1] += ss
+            self.bcs = combined_bcs
+        else:
+            self.bcs = bcs
+        self.signs = signs or [1]*len(self.bcs)
+
+    @classmethod
+    def from_subspace(cls, bcs, *args, **kwargs):
+        return cls([], *args, **kwargs, subspace_bcs=bcs)
 
     def apply(self, A):
         """
@@ -27,24 +38,26 @@ class block_bc(list):
         if not isinstance(A, block_mat):
             raise RuntimeError('A is not a block matrix')
 
+        A_orig = A.copy() if self.symmetric else A
+        self._apply(A)
+
         # Create rhs_bc with a copy of A before any symmetric modifications
-        rhs_bc = block_rhs_bc(self, A.copy() if self.symmetric else None)
+        return block_rhs_bc(self.bcs, A_orig, symmetric=self.symmetric, signs=self.signs)
 
-        self._apply(A, A.create_vec() if self.symmetric else None)
-
-        return rhs_bc
-
-    def _apply(self, A, b):
-        for i,bcs in enumerate(self):
+    def _apply(self, A):
+        if self.symmetric:
+            # dummy vec, required by dolfin api
+            b = A.create_vec(dim=0)
+        for i,bcs in enumerate(self.bcs):
             for bc in bcs:
-                for j in range(len(self)):
+                for j in range(len(A)):
                     if i==j:
                         if numpy.isscalar(A[i,i]):
                             # Convert to a diagonal matrix, so that the individual rows can be modified
                             from .block_assemble import _new_square_matrix
                             A[i,i] = _new_square_matrix(bc, A[i,i])
                         if self.symmetric:
-                            bc.zero_columns(A[i,i], b[i], 1.0)
+                            bc.zero_columns(A[i,i], b[i], self.signs[i])
                         else:
                             bc.apply(A[i,i])
                     else:
@@ -60,10 +73,12 @@ class block_bc(list):
                             else:
                                 bc.zero_columns(A[j,i], b[j])
 
-class block_rhs_bc(list):
-    def __init__(self, bc, A):
-        list.__init__(self, bc)
-        self.A = A;
+class block_rhs_bc:
+    def __init__(self, bcs, A, symmetric, signs):
+        self.bcs = bcs
+        self.A = A
+        self.symmetric = symmetric
+        self.signs = signs
 
     def apply(self, b):
         """Apply Dirichlet boundary conditions, in a time loop for example,
@@ -75,29 +90,31 @@ class block_rhs_bc(list):
         if not isinstance(b, block_vec):
             raise RuntimeError('not a block vector')
 
-        if self.A is not None:
-            b.allocate(self.A, dim=0)
-        else:
-            b.allocate(self)
+        b.allocate(self.A, dim=0)
 
-        if self.A is not None:
+        if self.symmetric:
             # First, collect a vector containing all non-zero BCs. These are required for
             # symmetric modification.
-            b_mod = b.copy()
+            b_mod = self.A.create_vec(dim=0)
             b_mod.zero()
-            for i,bcs in enumerate(self):
+            for i,bcs in enumerate(self.bcs):
                 for bc in bcs:
                     bc.apply(b_mod[i])
+                if self.signs[i] != 1:
+                    b_mod[i] *= self.signs[i]
 
-            # The non-zeroes of b_mod are now exactly the x values (assuming the
-            # matrix diagonal is in fact 1). We can thus create the necessary modifications
-            # to b by just multiplying with the un-symmetricised original matrix.
+            # The non-zeroes of b_mod are now exactly the x values (scaled by
+            # sign, i.e. matrix diagonal). We can thus create the necessary
+            # modifications to b by just multiplying with the un-symmetricised
+            # original matrix.
             b -= self.A * b_mod
 
         # Apply the actual BC dofs to b. (This must be done after the symmetric
         # correction above, since the correction might also change the BC dofs.)
-        for i,bcs in enumerate(self):
+        for i,bcs in enumerate(self.bcs):
             for bc in bcs:
                 bc.apply(b[i])
+            if self.signs[i] != 1:
+                b[i] *= self.signs[i]
 
         return self
