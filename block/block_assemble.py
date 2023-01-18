@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from builtins import map
 from builtins import range
 from . import *
-from .block_util import block_tensor, isscalar, wrap_in_list, create_vec_from 
+from .block_util import block_tensor, isscalar, wrap_in_list, create_vec_from
 
 def block_assemble(lhs, rhs=None, bcs=None,
                    symmetric=False, signs=None, symmetric_mod=None):
@@ -65,117 +65,29 @@ def block_assemble(lhs, rhs=None, bcs=None,
         b = block_vec(list(map(assemble_if_form, b.blocks.flat)))
     # If there are no boundary conditions then we are done.
     if bcs is None:
-        if A:
-            return [A,b] if b else A
-        else:
-            return b
+        return [A,b] if (A and b) else A or b
+
+    # Apply supplied RHS BCs if we are only assembling the right hand side. If we are
+    # assembling A anyway, we use that for symmetry preservation instead.
+    if A is None and symmetric_mod:
+        symmetric_mod.apply(b)
+        return b
 
     # check if arguments are forms, in which case bcs have to be split
     from ufl import Form
-    if isinstance(lhs, Form):
-        from .splitting import split_bcs
-        bcs = split_bcs(bcs, m)
-    # Otherwise check that boundary conditions are valid.
-    if not hasattr(bcs,'__iter__'):
-        raise TypeError(error_msg['invalid bcs'])
-    if len(bcs) is not m:
-        raise TypeError(error_msg['invalid bcs'])
-    from dolfin import DirichletBC
-    for bc in bcs:
-        if isinstance(bc,DirichletBC) or bc is None:
-            pass
-        else:
-            if not hasattr(bc,'__iter__'):
-                raise TypeError(error_msg['invalid bcs'])
-            else:
-                for bc_i in bc:
-                    if isinstance(bc_i,DirichletBC):
-                        pass
-                    else:
-                        raise TypeError(error_msg['invalid bcs'])
-    bcs = [bc if hasattr(bc,'__iter__') else [bc] if bc else bc for bc in bcs]
-    # Apply BCs if we are only assembling the righ hand side
-    if not A:
-        if symmetric_mod:
-            b.allocate(symmetric_mod)
-        for i in range(m):
-            if bcs[i]:
-                if isscalar(b[i]):
-                    b[i], val = create_vec_from(bcs[i][0]), b[i]
-                    b[i][:] = val
-                for bc in bcs[i]: bc.apply(b[i])
-        if symmetric_mod:
-            b -= symmetric_mod*b
-        return b
-    # If a signs argument is passed, check if it is valid.
-    # Otherwise guess.
-    if signs and symmetric:
-        if ( hasattr(signs,'__iter__')  and len(signs)==m ):
-            for sign in signs:
-                if sign not in (-1,1):
-                    raise TypeError(error_msg['invalid signs'])
-        else:
-            raise TypeError(error_msg['invalid signs'])
-    elif symmetric:
-        from numpy.random import random
-        signs = [0]*m
-        for i in range(m):
-            if isscalar(A[i,i]):
-                signs[i] = -1 if A[i,i] < 0 else 1
-            else:
-                x = A[i,i].create_vec(dim=1)
-                x.set_local(random(x.local_size()))
-                signs[i] = -1 if x.inner(A[i,i]*x) < 0 else 1
-    # Now apply boundary conditions.
-    if b:
-        b.allocate(A, dim=0)
-        
-    if symmetric:
-        # If we are preserving symmetry but don't have the rhs b,
-        # then we need to store the symmetric corretions to b
-        # as a matrix which we call A_mod
-        b, A_mod = A.create_vec(dim=0), A.copy()
-        
-    for i in range(n):
-        
-        if bcs[i]:
-            for bc in bcs[i]:
-                # Apply BCs to the diagonal block.
-                if isscalar(A[i,i]):
-                    A[i,i] = _new_square_matrix(bc,A[i,i])
-                    if symmetric:
-                        A_mod[i,i] = A[i,i].copy()
-                if symmetric:
-                    bc.zero_columns(A[i,i],b[i],signs[i])
-                    bc.apply(A_mod[i,i])
-                elif b:
-                    bc.apply(A[i,i],b[i])
-                else:
-                    bc.apply(A[i,i])
-                # Zero out the rows corresponding to BC dofs.
-                for j in list(range(i)) + list(range(i+1,n)):
-                    if A[i,j] is 0:
-                        continue
-                    assert not isscalar(A[i,j])
-                    bc.zero(A[i,j])
-                # If we are not preserving symmetry then we are done at this point.
-                # Otherwise, we need to zero out the columns as well
-                if symmetric:
-                    for j in list(range(i)) + list(range(i+1,n)):
-                        if A[j,i] is 0:
-                            continue
-                        assert not isscalar(A[j,i])
-                        bc.zero_columns(A[j,i],b[j])
-                        bc.zero(A_mod[i,j])
+    lhs_bcs = (block_bc.from_mixed if isinstance(lhs, Form) else block_bc)(bcs, symmetric=symmetric, signs=signs)
 
-    result = [A]
-    if symmetric:
-        for i in range(n):
-            for j in range(n):
-                A_mod[i,j] -= A[i,j]
-        result += [A_mod]
+    result = []
+    if A:
+        rhs_bcs = lhs_bcs.apply(A)
+        result.append(A)
+    else:
+        rhs_bcs = lhs_bcs.rhs(None)
+    if symmetric and A:
+        result.append(rhs_bcs)
     if b:
-        result += [b]
+        rhs_bcs.apply(b)
+        result.append(b)
     return result[0] if len(result)==1 else result
 
 
