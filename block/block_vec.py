@@ -26,10 +26,6 @@ class block_vec(block_container):
         DirichletBCs or FunctionSpaces). If dim==0, newly allocated vectors use
         layout appropriate for b (in Ax=b); if dim==1, the layout for x is
         used."""
-        if np.ndim(template) == 1 and dim is not None:
-            raise ValueError('Cannot specify dim with 1D template')
-        elif np.ndim(template) == 2 and dim is None:
-            raise ValueError('2D template requires specified dim')
         from dolfin import GenericVector
         from .block_mat import block_mat
         from .block_util import create_vec_from
@@ -83,15 +79,17 @@ class block_vec(block_container):
     # Map operator on the block_vec to operators on the individual blocks.
     #
 
-    def _map_operator(self, operator, inplace=False, args_fn=lambda i: ()):
+    def _map_operator(self, operator, inplace=False, args_fn=lambda i: (), filter_fn=None):
         y = self if inplace else block_vec(len(self))
         for i in range(len(self)):
             try:
-                v = getattr(self[i], operator)(*args_fn(i))
-                if isinstance(v, type(NotImplemented)):
-                    raise NotImplementedError()
-                if not inplace:
-                    y[i] = v
+                args = args_fn(i)
+                if filter_fn is None or filter_fn(args):
+                    v = getattr(self[i], operator)(*args_fn(i))
+                    if isinstance(v, type(NotImplemented)):
+                        raise NotImplementedError()
+                    if not inplace:
+                        y[i] = v
             except Exception as e:
                 if i==0 or not inplace:
                     raise e
@@ -100,10 +98,10 @@ class block_vec(block_container):
                         "operator partially applied, block %d does not support '%s' (err=%s)" % (i, operator, str(e)))
         return y
 
-    def _map_scalar_operator(self, operator, x, inplace=False):
+    def _map_scalar_operator(self, operator, x, inplace=False, filter_fn=None):
         return self._map_operator(operator, args_fn=lambda i: (float(x),), inplace=inplace)
 
-    def _map_vector_operator(self, operator, x, inplace=False):
+    def _map_vector_operator(self, operator, x, inplace=False, filter_fn=None):
         return self._map_operator(operator, args_fn=lambda i: (x[i],), inplace=inplace)
 
     def _map_any_operator(self, operator, x, inplace=False):
@@ -134,7 +132,9 @@ class block_vec(block_container):
     def __rmul__(self, x): return self._map_scalar_operator('__rmul__', x)
     def __imul__(self, x): return self._map_scalar_operator('__imul__', x, inplace=True)
 
-    def inner(self, x): return sum(self._map_vector_operator('inner', x))
+    def inner(self, x):    return sum(self._map_vector_operator('inner', x))
+    def scale_by(self, x): return self._map_vector_operator('__imul__', x, inplace=True,
+                                                            filter_fn=lambda x: x != (1,))
 
     def get_local(self):    return self._map_operator('get_local')
     def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)
