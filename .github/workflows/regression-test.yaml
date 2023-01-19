@@ -1,6 +1,6 @@
 on: [push]
 jobs:
-  regression-tests:
+  tests:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,15 +35,20 @@ jobs:
         with:
           path: /opt/conda/envs/dolfin
           #key: dolfin-conda-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-          key: conda-dolfin-2
+          key: env-conda-dolfin
         id: cache
 
-      - name: Update environment
+      - name: Install fenics
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mamba install -y fenics-dolfin scipy
           mamba clean --all
           mamba install quadpy gcc gfortran make swig
           mamba clean --all
+
+      - name: Install haznics
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
           git clone https://github.com/HAZmathTeam/hazmath
           cd hazmath
           mamba install gcc gfortran make swig
@@ -57,9 +62,21 @@ jobs:
           package_data={'haznics': ['_haznics.so', '../lib/libhazmath.so']})
           EOF
           python -m pip install .
+          cp lib/libhazmath.so /opt/conda/envs/dolfin/lib/
 
+      - name: Install utilities
         if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install pytest
+
+      - name: Set environment
+        run: |
+          echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
 
       - name: Run tests
         run: |
-          PYTHONPATH=$PWD demo/regression-test.sh
+          pytest -v test
+
+      - name: Run regression tests
+        run: |
+          demo/regression-test.sh
