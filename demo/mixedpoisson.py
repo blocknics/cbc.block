@@ -144,9 +144,8 @@ AAinv = MinRes(AA, precond=AAp, show=2, name='AA^')
 Sigma, U = AAinv * bb
 #=====================
 
-from block.testing import check_expected
-check_expected('Sigma', Sigma, norm_only=False)
-check_expected('U', U, norm_only=False)
+check_expected('Sigma', Sigma, show=True)
+check_expected('U', U, show=True)
 
 # Plot sigma and u
 if MPI.size(mesh.mpi_comm()) == 1:

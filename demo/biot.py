@@ -183,5 +183,4 @@ while t <= T:
     t += float(dt)
 print ("Finished normally")
 
-from block.testing import check_expected
-check_expected('x', x, show=False)
+check_expected('x', x)

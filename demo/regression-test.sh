@@ -2,8 +2,8 @@
 
 # Script that runs all cbc.block demos and exits if anything goes wrong. If
 # this script finishes successfully, we are reasonably confident that there are
-# no api-related breakages (and other types of error will often lead to a lack
-# of convergence, so in practice they may be apparent too).
+# no api-related breakages, and that the results run through 'check_expected' are
+# not regressed.
 
 set -e
 export DOLFIN_NOPLOT=1
@@ -12,14 +12,7 @@ export BLOCK_REGRESSION_ABORT=1
 cd ${0%/*}
 demos=$(find . -name \*.py)
 
-if which parallel &>/dev/null; then
-    parallel --gnu -j +0 --halt-on-error=2 -v -n 1 python3 ::: $demos
-else
-    for demo in $demos; do
-	echo python3 $demo
-	python3 $demo
-    done
-fi
+xargs -P4 -n1 sh -c 'echo $0; python3 $0 >/dev/null || exit 255' <<<$demos
 
 #for demo in $demos; do
 #    echo mpirun -np 3 python $demo

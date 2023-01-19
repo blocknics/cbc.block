@@ -17,13 +17,21 @@ class block_bc:
 
     Basic inplace usage, with static BCs:
 
-    >>> bcs.apply(A).apply(b)
+    >>> rhs_bcs = bcs.apply(A)
+    >>> rhs_bcs.apply(b)
+
+    with the shortcut
+
+    >>> bcs.apply(A,b)
 
     Out-of-place usage may be useful when the boundary conditions are applied
     multiple times, such as with time-dependent BCs (to avoid having to
     re-assemble the RHS):
 
-    >>> x = LU(bcs(A)) * bcs(b)
+    >>> Ainv = LU(bcs(A))
+    >>> while True:
+    >>>     source.t = t
+    >>>     x = Ainv * bcs(b)
     """
     def __init__(self, bcs, symmetric=False, signs=None, subspace_bcs=None):
         # Clean up self, and check arguments
@@ -63,7 +71,7 @@ class block_bc:
         else:
             raise TypeError('BCs can only act on block_mat (A) or block_vec (b)')
 
-    def apply(self, A):
+    def apply(self, A, b=None):
         """
         Apply BCs to a block_mat LHS, and return an object which modifies the
         corresponding block_vec RHS.  Typical use:
@@ -77,7 +85,10 @@ class block_bc:
         self._apply(A)
 
         # Create rhs_bc with a copy of A before any symmetric modifications
-        return self.rhs(A_orig)
+        rhs = self.rhs(A_orig)
+        if b is not None:
+            rhs.apply(b)
+        return rhs
 
     def rhs(self, A):
         return block_rhs_bc(self.bcs, A, symmetric=self.symmetric, signs=self.signs)

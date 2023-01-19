@@ -28,15 +28,9 @@ B = hazAMG(A)
 
 Ainv = ConjGrad(A, precond=B, tolerance=1e-13, show=0)
 
-x = Ainv(show=2)*b
+x = Ainv*b
 
-from block.testing import check_expected
-check_expected('x', x, prefix='poisson')
-
-import timeit
-times = timeit.repeat("Ainv.create_vec()", repeat=15, number=1000000, globals=globals())
-times = sorted(times, reverse=True)[:5]
-print(f'ms mean: {np.mean(times):.2f} stddev: {np.std(times):.2f}')
+check_expected('x', x)
 
 u = Function(V)
 u.vector()[:] = x[:]

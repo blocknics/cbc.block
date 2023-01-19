@@ -96,9 +96,8 @@ AAinv = MinRes(AA, precond=prec, tolerance=1e-10, maxiter=500, show=2)
 # Compute solution
 u, p = AAinv * bb
 
-from block.testing import check_expected
-check_expected('velocity coefficient vector', u)
-check_expected('pressure coefficient vector', p)
+check_expected('velocity coefficient vector', u, show=True)
+check_expected('pressure coefficient vector', p, show=True)
 
 # Plot solution
 plot(Function(V, u))

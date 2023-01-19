@@ -104,7 +104,7 @@ class block_vec(block_container):
         return y
 
     def _map_scalar_operator(self, operator, x, inplace=False, filter_fn=None):
-        return self._map_operator(operator, args_fn=lambda i: (float(x),), inplace=inplace)
+        return self._map_operator(operator, args_fn=lambda i: (x,), inplace=inplace)
 
     def _map_vector_operator(self, operator, x, inplace=False, filter_fn=None):
         return self._map_operator(operator, args_fn=lambda i: (x[i],), inplace=inplace)
@@ -135,6 +135,7 @@ class block_vec(block_container):
     def inner(self, x):    return sum(self._map_vector_operator('inner', x))
     def scale_by(self, x): return self._map_vector_operator('__imul__', x, inplace=True,
                                                             filter_fn=lambda x: x != (1,))
+    def astype(self, x):   return self._map_scalar_operator('astype', x)
 
     def get_local(self):    return self._map_operator('get_local')
     def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)

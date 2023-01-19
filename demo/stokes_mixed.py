@@ -54,9 +54,8 @@ x = Ainv * y
 V, Q = [sub_space.collapse() for sub_space in W.split()]
 u, p = list(map(Function, [V, Q], x))
 
-from block.testing import check_expected
-check_expected('velocity coefficient vector', u.vector())
-check_expected('pressure coefficient vector', p.vector())
+check_expected('velocity coefficient vector', u.vector(), show=True)
+check_expected('pressure coefficient vector', p.vector(), show=True)
 
 plot(u)
 plot(p)

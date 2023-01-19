@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import print_function
 from dolfin import *
+from block import check_expected
 from block.iterative import ConjGrad
 from block.algebraic.petsc import AMG
 
@@ -58,7 +59,7 @@ b -= c
 B = AMG(A)
 Ainv = ConjGrad(A, precond=B, tolerance=1e-8, show=0)
 
-x = Ainv*b
+check_expected('x', Ainv*b)
 
 e = Ainv.eigenvalue_estimates()
 
