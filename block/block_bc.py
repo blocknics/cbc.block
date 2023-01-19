@@ -24,11 +24,12 @@ class block_bc:
 
     >>> bcs.apply(A,b)
 
-    Out-of-place usage may be useful when the boundary conditions are applied
-    multiple times, such as with time-dependent BCs (to avoid having to
-    re-assemble the RHS):
+    If boundary conditions are applied multiple times, it may be useful
+    to keep the original assembled mat/vec unchanged (for example, to
+    avoid having to re-assemble the RHS if the BC is time dependent but
+    the form itself isn't):
 
-    >>> Ainv = LU(bcs(A))
+    >>> Ainv = conjgrad(bcs(A))
     >>> while True:
     >>>     source.t = t
     >>>     x = Ainv * bcs(b)
@@ -160,13 +161,6 @@ class block_rhs_bc:
         # later, hence only the non-bc rows of A matter.
         return self.A * x_mod
 
-    def __call__(self, other):
-        if not isinstance(other, block_vec):
-            raise TypeError()
-        b = other.copy()
-        self.apply(b)
-        return b
-
     def apply(self, b):
         """Apply Dirichlet boundary conditions statically.  If BCs are mutable
         (time dependent for example), it is more convenient to use the callable
@@ -197,3 +191,10 @@ class block_rhs_bc:
                 b[i] *= self.signs[i]
 
         return self
+
+    def __call__(self, other):
+        if not isinstance(other, block_vec):
+            raise TypeError()
+        b = other.copy()
+        self.apply(b)
+        return b

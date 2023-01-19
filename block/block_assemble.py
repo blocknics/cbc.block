@@ -67,21 +67,23 @@ def block_assemble(lhs, rhs=None, bcs=None,
     if bcs is None:
         return [A,b] if (A and b) else A or b
 
+    # Apply supplied RHS BCs if we are only assembling the right hand side. If we are
+    # assembling A anyway, we use that for symmetry preservation instead.
+    if A is None and symmetric_mod:
+        symmetric_mod.apply(b)
+        return b
+
     # check if arguments are forms, in which case bcs have to be split
     from ufl import Form
     lhs_bcs = (block_bc.from_mixed if isinstance(lhs, Form) else block_bc)(bcs, symmetric=symmetric, signs=signs)
-    # Apply BCs if we are only assembling the right hand side
-    if A is None:
-        if symmetric_mod:
-            rhs_bcs = symmetric_mod
-        else:
-            rhs_bcs = lhs_bcs.rhs(None)
-        rhs_bcs.apply(b)
-        return b
 
-    rhs_bcs = lhs_bcs.apply(A)
-    result = [A]
-    if symmetric:
+    result = []
+    if A:
+        rhs_bcs = lhs_bcs.apply(A)
+        result.append(A)
+    else:
+        rhs_bcs = lhs_bcs.rhs(None)
+    if symmetric and A:
         result.append(rhs_bcs)
     if b:
         rhs_bcs.apply(b)
