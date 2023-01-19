@@ -17,7 +17,7 @@ def precondconjgrad(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
     d = z
     rz = inner(r,z)
     if rz < 0:
-        raise ValueError('Matrix is not positive')
+        raise ValueError('Preconditioner not positive-definite')
 
     iter = 0
     alphas = []
@@ -31,7 +31,7 @@ def precondconjgrad(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
         z = A*d
         dz = inner(d,z)
         if dz == 0:
-            print ('ConjGrad breakdown')
+            print(f'ConjGrad breakdown')
             break
         alpha = rz/dz
         x += alpha*d
@@ -43,7 +43,7 @@ def precondconjgrad(B, A, x, b, tolerance, maxiter, progress, relativeconv=False
         rz_prev = rz
         rz = inner(r,z)
         if rz < 0:
-            print ('ConjGrad breakdown')
+            print (f'Preconditioner not positive-definite')
             # Restore pre-breakdown state. Don't know if it helps any, but it's
             # consistent with returned quasi-residuals.
             x -= alpha*d
