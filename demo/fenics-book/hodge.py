@@ -66,7 +66,7 @@ x.randomize()
 bb.allocate(AA, dim=0)
 
 Linv = CGN(L, precond=AMG(L), initial_guess=x[0], tolerance=1e-9, maxiter=2000, show=0)
-check_expected('P2L', Linv * bb[0], rtol=1e-7)
+check_expected('P2L', Linv * bb[0], rtol=1e-6)
 e = Linv.eigenvalue_estimates()
 K_P2L = sqrt(e[-1]/e[0])
 

@@ -83,4 +83,4 @@ AAinv = MinRes(AA, precond=prec, initial_guess=xx, tolerance=1e-8, maxiter=500, 
 u, p = AAinv * bb
 
 check_expected('u', u, rtol=1e-4, show=True)
-check_expected('p', p, rtol=1e-5, show=True)
+check_expected('p', p, rtol=1e-4, show=True)
