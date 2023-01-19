@@ -12,7 +12,7 @@ export BLOCK_REGRESSION_ABORT=1
 cd ${0%/*}
 demos=$(find . -name \*.py)
 
-xargs -P4 -n1 sh -c 'echo $0; if ! grep -q hazmath $0; then python3 $0 >/dev/null; fi || exit 255' <<<$demos
+xargs -P4 -n1 sh -c 'echo $0; python3 $0 >/dev/null || exit 255' <<<$demos
 
 #for demo in $demos; do
 #    echo mpirun -np 3 python $demo
