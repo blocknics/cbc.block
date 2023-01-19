@@ -1,0 +1,49 @@
+on: [push]
+jobs:
+  run-regression-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup conda-forge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: dolfin
+            #python-version: 3.10
+            use-mamba: true
+
+      - name: Prepare cache
+        run: |
+          if [[ $CONDA != /opt/conda ]]; then
+            mkdir -p /opt/conda/
+            ln -s $CONDA/envs /opt/conda/envs
+          fi
+          echo CONDA=$CONDA
+          mamba env list
+
+      #- name: Set cache date (lifetime)
+      #  run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - name: Environment cache
+        uses: actions/cache@v3
+        with:
+          path: /opt/conda/envs/dolfin
+          #key: dolfin-conda-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          key: conda-dolfin
+        id: cache
+
+      - name: Update environment
+        run: |
+          mamba install -y fenics-dolfin scipy
+          mamba clean --all
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Run tests
+        run: |
+          PYTHONPATH=$PWD demo/regression-test.sh
