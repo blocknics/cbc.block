@@ -9,65 +9,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup conda-forge
-        uses: conda-incubator/setup-miniconda@v2
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
         with:
-            miniforge-variant: Mambaforge
-            miniforge-version: latest
-            activate-environment: dolfin
-            #python-version: 3.10
-            use-mamba: true
-
-      - name: Prepare cache
-        run: |
-          if [[ $CONDA != /opt/conda ]]; then
-            mkdir -p /opt/conda/
-            ln -s $CONDA/envs /opt/conda/envs
-          fi
-          echo CONDA=$CONDA
-          mamba env list
-
-      #- name: Set cache date (lifetime)
-      #  run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-
-      - name: Environment cache
-        uses: actions/cache@v3
-        with:
-          path: /opt/conda/envs/dolfin
-          #key: dolfin-conda-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-          key: env-conda-dolfin
-        id: cache
-
-      - name: Install fenics
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          mamba install -y fenics-dolfin scipy
-          mamba clean --all
-          mamba install quadpy gcc gfortran make swig
-          mamba clean --all
-
-      - name: Install haznics
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          git clone https://github.com/HAZmathTeam/hazmath
-          cd hazmath
-          mamba install gcc gfortran make swig
-          make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes
-          make install
-          cp -a swig_files haznics
-          mv haznics/haznics.py haznics/__init__.py
-          cat >setup.py <<EOF
-          from distutils.core import setup
-          setup(name='haznics', packages=['haznics'],
-          package_data={'haznics': ['_haznics.so', '../lib/libhazmath.so']})
-          EOF
-          python -m pip install .
-          cp lib/libhazmath.so /opt/conda/envs/dolfin/lib/
-
-      - name: Install utilities
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          pip install pytest
+          # fenics-dolfin on conda-forge starts at 3.8
+          python-version: 3.8.*
 
       - name: Set environment
         run: |
