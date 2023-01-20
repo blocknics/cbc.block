@@ -1,4 +1,11 @@
-on: [push]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -13,7 +20,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
         with:
           # fenics-dolfin on conda-forge starts at 3.8
-          python-version: 3.8.*
+          python-version: "3.8.*"
 
       - name: Set environment
         run: |
