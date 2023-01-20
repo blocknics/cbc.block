@@ -37,6 +37,8 @@ Bugs, questions, contributions: Visit http://bitbucket.org/fenics-apps/cbc.block
   version 2.1 or later. Some files under block/iterative/ use the BSD license,
   this is noted in the individual files.
 
+![Regression test status](https://github.com/jobh/fenics-block/actions/workflows/regression-test.yaml/badge.svg?branch=master)
+
 Installation
 ------------
 Using conda-forge,
