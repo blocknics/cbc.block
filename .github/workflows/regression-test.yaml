@@ -18,11 +18,17 @@ jobs:
       - name: Set environment
         run: |
           echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
+          pip install coverage
 
       - name: Run tests
         run: |
-          pytest -v test
+          coverage run --parallel-mode -m pytest -v test
 
       - name: Run regression tests
         run: |
-          demo/regression-test.sh
+          demo/regression-test.sh --coverage
+
+      - name: Coverage report
+        run: |
+          coverage combine
+          coverage report -m --include "block/*"
