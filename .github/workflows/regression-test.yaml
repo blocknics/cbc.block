@@ -46,23 +46,20 @@ jobs:
           coverage report -m --include "block/*"
           coverage xml --include "block/*" --quiet
 
-      - name: Code Coverage Report
+      - name: Coverage PR comment
         if: github.event_name == 'pull_request'
-        uses: irongut/CodeCoverageSummary@v1.3.0
+        continue-on-error: true # it fails but only after doing its thing
+        uses: 5monkeys/cobertura-action@master
         with:
-          filename: coverage.xml
-          badge: true
-          fail_below_min: false
-          format: markdown
-          hide_branch_rate: false
-          hide_complexity: false
-          indicators: true
-          output: both
-          #thresholds: '60 80'
+          #path: src/test.xml
+          #minimum_coverage: 75
+          skip_covered: false
+          minimum_coverage: 50
+          fail_below_threshold: false
+          show_line: true
+          show_branch: true
+          show_missing: true
+          link_missing_lines: true
+          #link_missing_lines_source_dir: 
+          only_changed_files: true
 
-      - name: Add Coverage PR Comment
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          recreate: true
-          path: code-coverage-results.md
