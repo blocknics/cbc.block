@@ -64,7 +64,7 @@ class block_rhs_bc(list):
             raise RuntimeError('not a block vector')
 
         if self.A is not None:
-            b.allocate(self.A)
+            b.allocate(self.A, dim=0)
         else:
             from .block_util import isscalar, _create_vec
             for i,bcs in enumerate(self):

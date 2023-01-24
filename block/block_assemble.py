@@ -105,7 +105,6 @@ def block_assemble(lhs, rhs=None, bcs=None,
                     b[i][:] = val
                 for bc in bcs[i]: bc.apply(b[i])
         if symmetric_mod:
-            b.allocate(symmetric_mod)
             b -= symmetric_mod*b
         return b
     # If a signs argument is passed, check if it is valid.
@@ -129,13 +128,13 @@ def block_assemble(lhs, rhs=None, bcs=None,
                 signs[i] = -1 if x.inner(A[i,i]*x) < 0 else 1
     # Now apply boundary conditions.
     if b:
-        b.allocate(A)
+        b.allocate(A, dim=0)
         
     if symmetric:
         # If we are preserving symmetry but don't have the rhs b,
         # then we need to store the symmetric corretions to b
         # as a matrix which we call A_mod
-        b, A_mod = A.create_vec(), A.copy()
+        b, A_mod = A.create_vec(dim=0), A.copy()
         
     for i in range(n):
         
