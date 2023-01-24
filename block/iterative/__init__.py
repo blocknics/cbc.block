@@ -6,6 +6,10 @@ class ConjGrad(iterative):
     from . import conjgrad
     method = staticmethod(conjgrad.precondconjgrad)
 
+class FCG(iterative):
+    from . import flexible_conjgrad
+    method = staticmethod(flexible_conjgrad.precondconjgrad)
+
 class BiCGStab(iterative):
     from . import bicgstab
     method = staticmethod(bicgstab.precondBiCGStab)
