@@ -29,7 +29,7 @@ if (( $# )); then
         exit 255
     fi
     if [[ -n $BLOCK_REGRESSION_COVERAGE ]] && grep -q '^[^#]*check_expected(' "$1"; then
-        cmd="coverage run --parallel-mode"
+        cmd="coverage run --parallel-mode --branch"
     else
         cmd="python3"
     fi
