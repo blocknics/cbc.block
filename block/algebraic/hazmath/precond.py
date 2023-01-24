@@ -404,7 +404,7 @@ class RA(Precond):
         # set RA preconditioner #
         precond = haznics.create_precond_ra(A_ptr, M_ptr, s_power, t_power,
                                             alpha, beta, scaling_a, scaling_m,
-                                            amgparam)
+                                            ra_tol=1e-6, amgparam=amgparam)
 
         # if fail, setup returns null
         if not precond:
