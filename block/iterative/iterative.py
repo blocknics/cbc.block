@@ -119,6 +119,14 @@ class iterative(block_base):
         if self.retain_guess:
             self.initial_guess = x
 
+        if True:
+            # Tag vectors with iteration counts so that they can be picked up
+            # by regression tests.
+            x._regr_test_niter = self.iterations
+            if isinstance(x, block_base):
+                for block in x:
+                    block._regr_test_niter = self.iterations
+
         if not self.converged and self.nonconvergence_is_fatal:
             raise RuntimeError('Not converged')
 

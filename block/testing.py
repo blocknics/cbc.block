@@ -24,7 +24,8 @@ def _log_or_raise(msg):
                 print(f'! {_errs} expected test(s) failed')
                 print('  Run with BLOCK_REGRESSION_SAVE=1 to store new values as reference')
 
-def check_expected(name, vec, show=False, rtol=1e-10, prefix=None):
+def check_expected(name, vec, show=False, rtol=1e-10, itol=0.1, prefix=None):
+    itol += 1
     if prefix is None:
         prefix = pathlib.Path(inspect.stack()[1].filename).stem
     cur_norm = vec.norm('l2')
@@ -41,6 +42,7 @@ def check_expected(name, vec, show=False, rtol=1e-10, prefix=None):
     cur_vec_mean = np.add.reduceat(cur_vec, chunks) / divisor
     cur_vec_rms = np.sqrt(np.add.reduceat(cur_vec**2, chunks) / divisor)
     cur_vec = (cur_vec_mean + cur_vec_rms) / 2
+    cur_iter = getattr(vec, '_regr_test_niter', None)
 
     fname = pathlib.Path(__file__).parent.parent / f'data/regression/{quote_plus(prefix)}.{quote_plus(name)}.pickle'
     do_check = not os.environ.get('BLOCK_REGRESSION_SAVE') and fname.exists()
@@ -49,6 +51,7 @@ def check_expected(name, vec, show=False, rtol=1e-10, prefix=None):
         with open(fname, 'rb') as f:
             data = pickle.load(f)
         ref_norm = data['norm']
+        ref_iter = data.get('iter')
         if is_serial:
             try:
                 ref_vec = data['vec']
@@ -62,10 +65,13 @@ def check_expected(name, vec, show=False, rtol=1e-10, prefix=None):
         rdiff = abs(cur_norm - ref_norm) / max(ref_norm,1)
         if rdiff > rtol:
             _log_or_raise(f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > {rtol:.3g})')
+        if cur_iter != ref_iter:
+            if cur_iter is None or ref_iter is None or not ref_iter/itol <= cur_iter <= ref_iter*itol:
+                _log_or_raise(f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations')
     else:
         if is_serial:
             with open(fname, 'wb') as f:
-                data = dict(norm=cur_norm)
+                data = dict(norm=cur_norm, iter=cur_iter)
                 data['vec'] = cur_vec
                 pickle.dump(data, f)
         else:
