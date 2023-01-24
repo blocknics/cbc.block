@@ -71,8 +71,3 @@ runs:
       shell: bash -el {0}
       run: |
         pip install pytest
-
-    - name: Clean up
-      shell: bash -el {0}
-      run: |
-        mamba clean --all

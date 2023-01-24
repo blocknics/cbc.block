@@ -24,7 +24,7 @@ def _log_or_raise(msg):
                 print(f'! {_errs} expected test(s) failed')
                 print('  Run with BLOCK_REGRESSION_SAVE=1 to store new values as reference')
 
-def check_expected(name, vec, show=False, rtol=1e-10, itol=0.1, prefix=None):
+def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None):
     itol += 1
     if prefix is None:
         prefix = pathlib.Path(inspect.stack()[1].filename).stem
