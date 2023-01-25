@@ -1,22 +1,25 @@
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - master
+  # allow it to be called directly:
   workflow_dispatch:
-
-permissions:
-  contents: read
-  pull-requests: write
+  # allow it to be called from another workflow
+  workflow_call:
 
 jobs:
   tests:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
     defaults:
       run:
         shell: bash -el {0}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -44,11 +47,10 @@ jobs:
         run: |
           coverage combine
           coverage report -m --include "block/*"
+          coverage html --include "block/*" --quiet
           coverage xml --include "block/*" --quiet
 
       - name: Coverage PR comment
-        if: github.event_name == 'pull_request'
-        continue-on-error: true # it fails but only after doing its thing
         uses: 5monkeys/cobertura-action@master
         with:
           #path: src/test.xml
@@ -61,5 +63,10 @@ jobs:
           show_missing: true
           link_missing_lines: true
           #link_missing_lines_source_dir: 
-          only_changed_files: true
+          only_changed_files: ${{ github.event_name == 'pull_request' }}
 
+      - name: Coverage artifact upload
+        uses: actions/upload-artifact@v3
+        with:
+          path: './htmlcov'
+          name: coverage-report

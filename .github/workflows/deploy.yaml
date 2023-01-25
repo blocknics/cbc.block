@@ -1,0 +1,68 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  tests:
+    uses: ./.github/workflows/test.yaml
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+
+  deploy-to-pypi:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: tests
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build sdist
+        run: |
+          python setup.py sdist
+          echo ref: {{ github.ref }}
+
+      - name: Check that tag matches version
+        run: |
+          setup_version=$(grep ^version setup.cfg | cut -d = -f 2 | tr -d "[:space:]")
+          if [[ "$GITHUB_REF_NAME" != "v$setup_version" ]]; then
+            echo "'$GITHUB_REF_NAME' (tag) != v'$setup_version' (setup.cfg)"
+            exit 1
+          fi
+
+      - name: Publish to pypi
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+
+  deploy-to-web:
+    runs-on: ubuntu-latest
+    needs: tests
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-report
+          path: "./public/htmlcov"
+
+      - name: Upload page artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: "./public"
+
+      - name: Deploy coverage report to GH Pages
+        id: deployment
+        uses: actions/deploy-pages@v1

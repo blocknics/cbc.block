@@ -61,7 +61,7 @@ runs:
         cat >setup.py <<EOF
         from distutils.core import setup
         setup(name='haznics', packages=['haznics'],
-        package_data={'haznics': ['_haznics.so', '../lib/libhazmath.so']})
+        package_data={'haznics': ['_haznics.so']})
         EOF
         python -m pip install .
         cp lib/libhazmath.so /opt/conda/envs/dolfin/lib/
