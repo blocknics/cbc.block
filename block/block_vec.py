@@ -146,6 +146,11 @@ class block_vec(block_container):
             y[i] = v
         return y
 
+    def _map_any_operator(self, operator, x, inplace=False):
+        if hasattr(x, '__iter__'):
+            return self._map_vector_operator(operator, x, inplace)
+        else:
+            return self._map_scalar_operator(operator, x, inplace)
 
     def copy(self):
         from . import block_util
@@ -161,7 +166,7 @@ class block_vec(block_container):
     def __radd__(self, x): return self._map_vector_operator('__radd__', x)
     def __iadd__(self, x): return self._map_vector_operator('__iadd__', x, True)
 
-    def __sub__ (self, x): return self._map_vector_operator('__sub__',  x)
+    def __sub__ (self, x): return self._map_any_operator('__sub__',  x)
     def __rsub__(self, x): return self._map_vector_operator('__rsub__', x)
     def __isub__(self, x): return self._map_vector_operator('__isub__', x, True)
 

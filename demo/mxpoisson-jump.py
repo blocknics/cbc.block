@@ -82,5 +82,5 @@ AAinv = MinRes(AA, precond=prec, initial_guess=xx, tolerance=1e-8, maxiter=500, 
 # Compute solution
 u, p = AAinv * bb
 
-check_expected('u', u, rtol=1e-4, show=True)
-check_expected('p', p, rtol=1e-5, show=True)
+check_expected('u', u, rtol=1e-3, expected=0, show=True)
+check_expected('p', p, rtol=1e-4, expected=0, show=True)

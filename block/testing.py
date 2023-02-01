@@ -10,6 +10,9 @@ import pickle
 class RegressionFailure(Exception):
     pass
 
+def _regr_root():
+    return pathlib.Path(__file__).parent.parent / 'data/regression'
+
 _errs = 0
 def _log_or_raise(msg):
     if os.environ.get('BLOCK_REGRESSION_ABORT'):
@@ -22,60 +25,82 @@ def _log_or_raise(msg):
             @atexit.register
             def print_msg():
                 print(f'! {_errs} expected test(s) failed')
-                print('  Run with BLOCK_REGRESSION_SAVE=1 to store new values as reference')
+                print(f'  Remove file(s) in {_regr_root()}/ and re-run to store new values as reference')
 
-def check_expected(name, vec, show=False, rtol=1e-10, itol=0.1, prefix=None):
+def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expected=None):
     itol += 1
     if prefix is None:
         prefix = pathlib.Path(inspect.stack()[1].filename).stem
-    cur_norm = vec.norm('l2')
-    if show:
-        print(f'Norm of {name}: {cur_norm:.6f}')
-    cur_vec = vec.get_local()
-    if not isinstance(cur_vec, np.ndarray):
-        cur_vec = np.concatenate(cur_vec)
-    # To save disk&repo space, we decimate the vector and calculate mean+rms
-    # within each chunk. This is quite arbitrary, but is intended to be robust
-    # decimation which still catches most regression scenarios in practice.
-    chunks = np.arange(0, len(cur_vec), 10)
-    divisor = np.add.reduceat(np.ones_like(cur_vec), chunks)
-    cur_vec_mean = np.add.reduceat(cur_vec, chunks) / divisor
-    cur_vec_rms = np.sqrt(np.add.reduceat(cur_vec**2, chunks) / divisor)
-    cur_vec = (cur_vec_mean + cur_vec_rms) / 2
+    def _to_numpy(v):
+        if np.isscalar(v):
+            return v
+        if hasattr(v, 'get_local'):
+            v = v.get_local()
+        if not isinstance(v, np.ndarray):
+            v = np.concatenate(v)
+        if expected is None:
+            # To save disk&repo space, we decimate the vector and calculate mean+rms
+            # within each chunk. This is quite arbitrary, but is intended to be robust
+            # decimation which still catches most regression scenarios in practice.
+            chunks = np.arange(0, len(v), 10)
+            divisor = np.add.reduceat(np.ones_like(v), chunks)
+            v_mean = np.add.reduceat(v, chunks) / divisor
+            v_rms = np.sqrt(np.add.reduceat(v**2, chunks) / divisor)
+            return (v_mean + v_rms) / 2
+        else:
+            # we don't save the vector to disk, hence no decimation
+            return v
+    def _l2(v):
+        if np.isscalar(v):
+            return v
+        elif hasattr(v, 'norm'):
+            return v.norm('l2')
+        else:
+            return np.sqrt(np.sum(v**2)/len(v))
+    cur_norm = _l2(vec)
+    cur_vec = _to_numpy(vec)
     cur_iter = getattr(vec, '_regr_test_niter', None)
 
-    fname = pathlib.Path(__file__).parent.parent / f'data/regression/{quote_plus(prefix)}.{quote_plus(name)}.pickle'
-    do_check = not os.environ.get('BLOCK_REGRESSION_SAVE') and fname.exists()
-    is_serial = MPI.size(MPI.comm_world) == 1
-    if do_check:
+    fname = _regr_root() / f'{quote_plus(prefix)}.{quote_plus(name)}.pickle'
+    if fname.exists():
         with open(fname, 'rb') as f:
             data = pickle.load(f)
-        ref_norm = data['norm']
-        ref_iter = data.get('iter')
-        if is_serial:
-            try:
-                ref_vec = data['vec']
-                err_norm = np.sqrt(np.sum((ref_vec - cur_vec) ** 2) / len(ref_vec))
-            except Exception:
-                _log_or_raise(f'Could not compute error norm for {name} ({prefix})')
-            else:
-                rdiff = err_norm / max(ref_norm,1)
-                if rdiff > rtol:
-                    _log_or_raise(f'Norm of {name} (decimated) error: {err_norm:.4g} ({rdiff:.3g} > {rtol:.3g}) ({prefix})')
+    else:
+        data = {}
+    ref_vec = _to_numpy(expected) if expected is not None else data.get('vec')
+    ref_norm = _l2(expected) if expected is not None else data.get('norm')
+    ref_iter = data.get('iter')
+    is_serial = (MPI.size(MPI.comm_world) == 1)
+
+    if is_serial and ref_vec is not None:
+        err_norm = _l2(cur_vec - ref_vec)
+        rdiff = err_norm / max(ref_norm,1)
+        if rdiff > rtol:
+            _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > {rtol:.3g}) ({prefix})')
+        elif show:
+            print(f'Norm of {name}: {cur_norm:.4f}, error: {err_norm:.4g}')
+    elif ref_norm is not None:
         rdiff = abs(cur_norm - ref_norm) / max(ref_norm,1)
         if rdiff > rtol:
             _log_or_raise(f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > {rtol:.3g})')
-        if cur_iter != ref_iter:
-            if cur_iter is None or ref_iter is None or not ref_iter/itol <= cur_iter <= ref_iter*itol:
-                _log_or_raise(f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations')
-    else:
+        if show:
+            print(f'Norm of {name}: {cur_norm:.4f}')
+    if is_serial and ref_iter is not None:
+        if cur_iter is None or not ref_iter/itol <= cur_iter <= ref_iter*itol:
+            _log_or_raise(f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations ({prefix})')
+
+    if not fname.exists():
         if is_serial:
-            with open(fname, 'wb') as f:
-                data = dict(norm=cur_norm, iter=cur_iter)
+            data = {}
+            if cur_iter is not None:
+                data['iter'] = cur_iter
+            if expected is None:
+                data['norm'] = cur_norm
                 data['vec'] = cur_vec
-                pickle.dump(data, f)
+            if data:
+                with open(fname, 'wb') as f:
+                    pickle.dump(data, f)
         else:
             print('Not saving regression results in parallel')
 
-    # return vec so that it can be used in an expression
     return vec

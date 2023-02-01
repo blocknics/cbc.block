@@ -36,6 +36,6 @@ u.vector()[:] = x[:]
 u2 = Function(V)
 solve(A, u2.vector(), b)
 
-print ("Max differences between the two solutions: ", (u.vector()-u2.vector()).norm("linf"))
+check_expected('x', x, expected=u2.vector(), show=True)
 
 
