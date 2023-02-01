@@ -31,25 +31,20 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
     itol += 1
     if prefix is None:
         prefix = pathlib.Path(inspect.stack()[1].filename).stem
-    def _to_numpy(v):
-        if np.isscalar(v):
-            return v
+    def _decimate(v):
+        # Pickle not supported for block_vec/dolfin_vec, convert to numpy
         if hasattr(v, 'get_local'):
             v = v.get_local()
         if not isinstance(v, np.ndarray):
             v = np.concatenate(v)
-        if expected is None:
-            # To save disk&repo space, we decimate the vector and calculate mean+rms
-            # within each chunk. This is quite arbitrary, but is intended to be robust
-            # decimation which still catches most regression scenarios in practice.
-            chunks = np.arange(0, len(v), 10)
-            divisor = np.add.reduceat(np.ones_like(v), chunks)
-            v_mean = np.add.reduceat(v, chunks) / divisor
-            v_rms = np.sqrt(np.add.reduceat(v**2, chunks) / divisor)
-            return (v_mean + v_rms) / 2
-        else:
-            # we don't save the vector to disk, hence no decimation
-            return v
+        # To save disk&repo space, we decimate the vector and calculate mean+rms
+        # within each chunk. This is quite arbitrary, but is intended to be robust
+        # decimation which still catches most regression scenarios in practice.
+        chunks = np.arange(0, len(v), 10)
+        divisor = np.add.reduceat(np.ones_like(v), chunks)
+        v_mean = np.add.reduceat(v, chunks) / divisor
+        v_rms = np.sqrt(np.add.reduceat(v**2, chunks) / divisor)
+        return (v_mean + v_rms) / 2
     def _l2(v):
         if np.isscalar(v):
             return v
@@ -57,9 +52,6 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
             return v.norm('l2')
         else:
             return np.sqrt(np.sum(v**2)/len(v))
-    cur_norm = _l2(vec)
-    cur_vec = _to_numpy(vec)
-    cur_iter = getattr(vec, '_regr_test_niter', None)
 
     fname = _regr_root() / f'{quote_plus(prefix)}.{quote_plus(name)}.pickle'
     if fname.exists():
@@ -67,9 +59,18 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
             data = pickle.load(f)
     else:
         data = {}
-    ref_vec = _to_numpy(expected) if expected is not None else data.get('vec')
-    ref_norm = _l2(expected) if expected is not None else data.get('norm')
+
+    cur_norm = _l2(vec)
+    cur_iter = getattr(vec, '_regr_test_niter', None)
     ref_iter = data.get('iter')
+    if expected is None:
+        cur_vec = _decimate(vec)
+        ref_vec = data.get('vec')
+        ref_norm = data.get('norm')
+    else:
+        cur_vec = vec
+        ref_vec = expected
+        ref_norm = _l2(expected)
     is_serial = (MPI.size(MPI.comm_world) == 1)
 
     if is_serial and ref_vec is not None:
