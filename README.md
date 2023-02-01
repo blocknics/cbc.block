@@ -71,9 +71,14 @@ pip install "fenics_ii @ git+https://github.com/MiroK/fenics_ii"
 pip install "cbc.block @ git+https://github.com/fenics-apps/cbc.block"
 
 # Install haznics from source. Examples are in examples/haznics.
+# Note, no branch or tag is currently compatible with cbc.block (master
+# is too unstable, v1.0.0 is too old), so download a specific revision.
 
-git clone --depth 1 https://github.com/HAZmathTeam/hazmath
-cd hazmath
+haz_rev=a2d5267b8c26dcc0fbfd75ff795cc9115d2331eb
+curl -L -o hazmath.zip https://github.com/HAZmathTeam/hazmath/archive/${haz_rev}.zip
+unzip hazmath.zip; rm hazmath.zip
+cd hazmath-${haz_rev}
+
 mamba install compilers c-compiler cxx-compiler fortran-compiler cmake>=3.15 make swig
 sed -i -e '/cmake_minimum_required/s/3.12/3.15/' CMakeLists.txt
 make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes
@@ -83,7 +88,7 @@ mv haznics/haznics.py haznics/__init__.py
 cat >setup.py <<-EOF
 	from distutils.core import setup
 	setup(name='haznics', packages=['haznics'],
-          package_data={'haznics': ['_haznics.so']})
+package_data={'haznics': ['_haznics.so']})
 EOF
 python -m pip install .
 ````

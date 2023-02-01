@@ -51,8 +51,10 @@ runs:
       run: |
         mamba env list
         mamba install compilers c-compiler cxx-compiler fortran-compiler cmake>=3.15 make swig
-        git clone --depth 1 https://github.com/HAZmathTeam/hazmath
-        cd hazmath
+        haz_rev=a2d5267b8c26dcc0fbfd75ff795cc9115d2331eb
+        curl -L -o hazmath.zip https://github.com/HAZmathTeam/hazmath/archive/${haz_rev}.zip
+        unzip hazmath.zip; rm hazmath.zip
+        cd hazmath-${haz_rev}
         sed -i -e '/cmake_minimum_required/s/3.12/3.15/' CMakeLists.txt
         make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes
         make install
