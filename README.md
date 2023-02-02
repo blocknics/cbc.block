@@ -96,4 +96,5 @@ python -m pip install .
 Publications
 ------------
 
-1. K.-A. Mardal, and J. B. Haga (2012). *Block preconditioning of systems of PDEs.* In A. Logg, K.-A. Mardal, G. N. Wells et al. (ed) *Automated Solution of Differential Equations by the Finite Element Method,* Springer. doi:10.1007/978-3-642-23099-8, <http://fenicsproject.org/book>
+1. K.-A. Mardal and J. B. Haga (2012). *Block preconditioning of systems of PDEs.* In A. Logg, K.-A. Mardal, G. N. Wells et al. (ed) *Automated Solution of Differential Equations by the Finite Element Method,* Springer. doi:10.1007/978-3-642-23099-8_35, <http://fenicsproject.org/book>
+2. A. Budisa, X. Hu, M. Kuchta, K.-A. Mardal and L. Zikatanov (2022). *HAZniCS — Software Components for Multiphysics Problems.* doi: 10.48550/ARXIV.2210.13274, <https://arxiv.org/abs/2210.13274>
