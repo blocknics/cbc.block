@@ -145,27 +145,12 @@ class block_rhs_bc:
         self.symmetric = symmetric
         self.signs = signs
 
-    @property
-    def b_mod(self):
-        # First, collect a vector containing all non-zero BCs. These are required for
-        # symmetric modification.
-        x_mod = self.A.create_vec(dim=0)
-        x_mod.zero()
-        for i,bcs in enumerate(self.bcs):
-            for bc in bcs:
-                bc.apply(x_mod[i])
-
-        # The non-zeroes of x_mod are now exactly the x values. We can thus
-        # create the necessary modifications to b by just multiplying with the
-        # un-symmetricised original matrix. The bc values are overwritten
-        # later, hence only the non-bc rows of A matter.
-        return self.A * x_mod
-
     def apply(self, b):
-        """Apply Dirichlet boundary conditions statically.  If BCs are mutable
-        (time dependent for example), it is more convenient to use the callable
-        form -- rhs_bc(b) -- to preserve the original contents of b for repeated
-        application without reassembly.
+        """Apply Dirichlet boundary conditions statically.  In the
+        inhomogeneous symmetric case b is changed globally; if BCs are mutable
+        (time dependent for example), it is then more convenient to use the
+        callable form -- rhs_bc(b) -- to preserve the original contents of b
+        for repeated application without reassembly.
         """
         if not isinstance(b, block_vec):
             raise TypeError('not a block vector')
@@ -175,12 +160,23 @@ class block_rhs_bc:
         except Exception:
             raise ValueError('Failed to allocate block vector, call b.allocate(something) first')
 
-        # Correct for the matrix elements zeroed by symmetricization
+        # Apply lifting to correct for the matrix columns zeroed by symmetricization
         if self.symmetric:
-            b -= self.b_mod
+            # First, collect a vector containing all non-zero BCs.
+            g = self.A.create_vec(dim=0)
+            g.zero()
+            for i,bcs in enumerate(self.bcs):
+                for bc in bcs:
+                    bc.apply(g[i])
+            # The non-zeroes of g are now exactly the inhomogeneous BC
+            # values. We can thus create the necessary modifications to b by
+            # just multiplying with the un-symmetricised original matrix. The
+            # bc values are overwritten below, hence only the non-BC rows of A
+            # matter.
+            b -= self.A * g
 
         # Apply the actual BC dofs to b. (This must be done after the symmetric
-        # correction above, since the correction might also change the BC dofs.)
+        # correction above, since A*g is not necessarily zero at BC dofs.)
         # If the sign is negative, we negate twice to effectively apply -bc.
         for i,bcs in enumerate(self.bcs):
             if self.signs[i] != 1 and bcs:
