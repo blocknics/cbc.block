@@ -74,12 +74,16 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
     is_serial = (MPI.size(MPI.comm_world) == 1)
 
     if is_serial and ref_vec is not None:
-        err_norm = _l2(cur_vec - ref_vec)
-        rdiff = err_norm / max(ref_norm,1)
-        if rdiff > rtol:
-            _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > {rtol:.3g}) ({prefix})')
-        elif show:
-            print(f'Norm of {name}: {cur_norm:.4f}, error: {err_norm:.4g}')
+        try:
+            err_norm = _l2(cur_vec - ref_vec)
+        except Exception as e:
+            _log_or_raise(f'Failed to compute error norm: {e}')
+        else:
+            rdiff = err_norm / max(ref_norm,1)
+            if rdiff > rtol:
+                _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > {rtol:.3g}) ({prefix})')
+            elif show:
+                print(f'Norm of {name}: {cur_norm:.4f}, error: {err_norm:.4g}')
     elif ref_norm is not None:
         rdiff = abs(cur_norm - ref_norm) / max(ref_norm,1)
         if rdiff > rtol:
