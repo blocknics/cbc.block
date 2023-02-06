@@ -55,31 +55,30 @@ Status (master branch)
 
 Installation
 ------------
-Using conda-forge,
+
+The fenics-dolfin package is available from conda-forge, or preinstalled on
+Docker images from <https://quay.io/organization/fenicsproject>. The recipe
+below assumes that you have an existing conda-forge installation; to install on
+Docker images, skip the first few steps.
 
 ```
 # Create an environment
 
-mamba create haznics
-mamba activate haznics
+conda create cbc-block
+conda activate cbc-block
 
-# Install dependencies. To install fenics_ii or cbc.block from source,
-# use "git clone https://..." followed by "pip install -e <dir>" instead.
+# Install base and dolfin (and optionally pytrilinos, but it doesn't seem to have a compatible version atm)
 
-mamba install fenics-dolfin quadpy
-pip install "fenics_ii @ git+https://github.com/MiroK/fenics_ii"
-pip install "cbc.block @ git+https://github.com/fenics-apps/cbc.block"
+conda install pip fenics-dolfin scipy
 
 # Install haznics from source. Examples are in examples/haznics.
-# Note, no branch or tag is currently compatible with cbc.block (master
-# is too unstable, v1.0.0 is too old), so download a specific revision.
+# This can be skipped, but some demos will fail to run.
 
-haz_rev=a2d5267b8c26dcc0fbfd75ff795cc9115d2331eb
-curl -L -o hazmath.zip https://github.com/HAZmathTeam/hazmath/archive/${haz_rev}.zip
-unzip hazmath.zip; rm hazmath.zip
-cd hazmath-${haz_rev}
+HAZ_VER=1.0.1
+git clone --branch v${HAZ_VER} --depth 1 https://github.com/HAZmathTeam/hazmath
+cd hazmath
 
-mamba install compilers c-compiler cxx-compiler fortran-compiler cmake>=3.15 make swig
+conda install compilers c-compiler cxx-compiler fortran-compiler cmake>=3.15 make swig
 sed -i -e '/cmake_minimum_required/s/3.12/3.15/' CMakeLists.txt
 make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes
 make install
@@ -87,11 +86,16 @@ cp -a swig_files haznics
 mv haznics/haznics.py haznics/__init__.py
 cat >setup.py <<-EOF
 	from distutils.core import setup
-	setup(name='haznics', packages=['haznics'],
-package_data={'haznics': ['_haznics.so']})
+	setup(name='haznics', version='${HAZ_VER}', packages=['haznics'],
+          package_data={'haznics': ['_haznics.so']})
 EOF
 python -m pip install .
 ````
+
+# Install cbc.block itself. To install from source,
+# use "git clone https://..." followed by "pip install -e <dir>[haznics]" instead.
+
+pip install "cbc.block[haznics] @ git+https://github.com/fenics-apps/cbc.block"
 
 Publications
 ------------
