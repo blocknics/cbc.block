@@ -43,7 +43,7 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash -el {0}
       run: |
-        mamba install fenics-dolfin quadpy scipy python==${{ inputs.python-version }}
+        mamba install pip fenics-dolfin scipy python==${{ inputs.python-version }}
 
     - name: Install haznics
       if: steps.cache.outputs.cache-hit != 'true'

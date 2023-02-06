@@ -36,12 +36,12 @@
   
 There is no real documentation apart from the python doc-strings, but an
 (outdated) introduction is found in
-[doc/blockdolfin.pdf](https://github.com/fenics-apps/cbc.block/blob/jobh/master/doc/blockdolfin.pdf).
+[doc/blockdolfin.pdf](https://github.com/blocknics/cbc.block/blob/master/doc/blockdolfin.pdf).
 Familiarity with the DOLFIN python interface is required. For more details of
 use, I recommend looking at the demos (start with demo/mixedpoisson.py), and
 the comments therein.
 
-Bugs, questions, contributions: Visit <http://github.com/fenics-apps/cbc.block>.
+Bugs, questions, contributions: Visit <http://github.com/blocknics/cbc.block>.
 
 > The code is licensed under the GNU Lesser Public License, found in COPYING,
 > version 2.1 or later. Some files under block/iterative/ use the BSD license,
@@ -49,9 +49,9 @@ Bugs, questions, contributions: Visit <http://github.com/fenics-apps/cbc.block>.
 
 Status (master branch)
 ----------------------
-![Regression test status](https://github.com/fenics-apps/cbc.block/actions/workflows/test.yaml/badge.svg?branch=master)
+![Regression test status](https://github.com/blocknics/cbc.block/actions/workflows/test.yaml/badge.svg?branch=master)
 
-[Full test coverage report](https://fenics-apps.github.io/cbc.block/htmlcov/)
+[Full test coverage report](https://blocknics.github.io/cbc.block/htmlcov/)
 
 Installation
 ------------
@@ -94,7 +94,7 @@ python -m pip install .
 # Install cbc.block itself. To install from source,
 # use "git clone https://..." followed by "pip install -e <dir>[haznics]" instead.
 
-pip install "cbc.block[haznics] @ git+https://github.com/fenics-apps/cbc.block"
+pip install "cbc.block[haznics] @ git+https://github.com/blocknics/cbc.block"
 ````
 
 Publications
