@@ -5,7 +5,6 @@
 *.swp
 .emacs.desktop*
 .ropeproject
-data/
 *.pvd
 *.vtu
 

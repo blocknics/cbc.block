@@ -5,6 +5,7 @@ from builtins import range
 
 from block.block_base import block_base
 import dolfin as df
+import os
 
 class iterative(block_base):
     def __init__(self, A, precond=1.0, tolerance=1e-5, initial_guess=None,
@@ -102,7 +103,7 @@ class iterative(block_base):
         elif self.show >= 2:
             print('%s %s [iter=%2d, time=%.2fs, res=%.1e, true res=%.1e]' \
                 % (self.name, msg, self.iterations, self.cputime, self.residuals[-1], (self.A*x-b).norm('l2')))
-        if self.show == 3:
+        if self.show == 3 and not "DOLFIN_NOPLOT" in os.environ:
             if comm.rank == 0:
                 try:
                     from matplotlib import pyplot
@@ -117,6 +118,14 @@ class iterative(block_base):
 
         if self.retain_guess:
             self.initial_guess = x
+
+        if True:
+            # Tag vectors with iteration counts so that they can be picked up
+            # by regression tests.
+            x._regr_test_niter = self.iterations
+            if isinstance(x, block_base):
+                for block in x:
+                    block._regr_test_niter = self.iterations
 
         if not self.converged and self.nonconvergence_is_fatal:
             raise RuntimeError('Not converged')

@@ -182,3 +182,5 @@ while t <= T:
     p_prev.vector()[:] = P
     t += float(dt)
 print ("Finished normally")
+
+check_expected('x', x)

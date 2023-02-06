@@ -66,27 +66,27 @@ x.randomize()
 bb.allocate(AA, dim=0)
 
 Linv = CGN(L, precond=AMG(L), initial_guess=x[0], tolerance=1e-9, maxiter=2000, show=0)
-Linv * bb[0]
+check_expected('P2L', Linv * bb[0], expected=0)
 e = Linv.eigenvalue_estimates()
 K_P2L = sqrt(e[-1]/e[0])
 
 Linv = CGN(A, precond=AMG(A), initial_guess=x[0], tolerance=1e-9, maxiter=2000, show=0)
-Linv * bb[0]
+check_expected('P1A', Linv * bb[0], expected=0)
 e = Linv.eigenvalue_estimates()
 K_P1A = sqrt(e[-1]/e[0])
 
 # Note april-2014: PETSc-AMG fails -- AMG(E) not positive definite. Find appropriate smoother?
 prec = block_mat([[AMG(A),  0  ],
                   [0,    ILU(E)]])
-AAinv = CGN(AA, precond=prec, initial_guess=x, tolerance=1e-9, maxiter=2000, show=0)
-AAinv*bb
+AAinv = CGN(AA, precond=prec, initial_guess=x, tolerance=1e-9, maxiter=2000, show=2)
+check_expected('B1AA', AAinv * bb, expected=0)
 e = AAinv.eigenvalue_estimates()
 K_B1AA = sqrt(e[len(e)-1]/e[0])
 
 prec = block_mat([[AMG(L),  0  ],
                   [0,    ILU(D)]])
 AAinv = CGN(AA, precond=prec, initial_guess=x, tolerance=1e-9, maxiter=2000, show=0)
-AAinv*bb
+check_expected('B2AA', AAinv * bb, expected=0)
 e = AAinv.eigenvalue_estimates()
 K_B2AA = sqrt(e[len(e)-1]/e[0])
 
