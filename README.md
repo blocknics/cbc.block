@@ -90,12 +90,12 @@ cat >setup.py <<-EOF
           package_data={'haznics': ['_haznics.so']})
 EOF
 python -m pip install .
-````
 
 # Install cbc.block itself. To install from source,
 # use "git clone https://..." followed by "pip install -e <dir>[haznics]" instead.
 
 pip install "cbc.block[haznics] @ git+https://github.com/fenics-apps/cbc.block"
+````
 
 Publications
 ------------
