@@ -16,7 +16,8 @@ def block_assemble(lhs, rhs=None, bcs=None,
             symmetric : Boundary conditions are applied so that symmetry of the system
                         is preserved. If only the left hand side of the system is given,
                         then a matrix represententing the rhs corrections is returned
-                        along with a symmetric matrix.
+                        along with a symmetric matrix. NOTE: Symmetric assembly not
+                        supported in parallel (MPI).
 
         symmetric_mod : Matrix describing symmetric corrections for assembly of the
                         of the rhs of a variational system.
@@ -34,11 +35,8 @@ def block_assemble(lhs, rhs=None, bcs=None,
     from numpy import ndarray
     has_rhs = True if isinstance(rhs, ndarray) else rhs != None
     has_lhs = True if isinstance(rhs, ndarray) else rhs != None
+    supports_mpi(not symmetric)
 
-    if symmetric:
-        from dolfin import MPI
-        if MPI.size(MPI.comm_world) > 1:
-            raise NotImplementedError(error_msg['mpi and symm'])
     if has_lhs and has_rhs:
         A, b = list(map(block_tensor,[lhs,rhs]))
         n, m = A.blocks.shape

@@ -9,6 +9,8 @@ from block.algebraic.petsc import *
 
 import dolfin
 
+supports_mpi(False)
+
 class numpy_op(block_base):
     from block.object_pool import vec_pool
     import numpy

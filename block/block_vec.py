@@ -47,7 +47,9 @@ class block_vec(block_container):
                     f"Can't allocate vector - no usable template for block {i}.\n"
                     "Consider calling something like bb.allocate([V, Q]) to initialise the block_vec."
                 )
-            self[i][:] = val or 0.0
+            self[i].zero()
+            if val:
+                self[i] += val
 
     def norm(self, ntype='l2'):
         if ntype == 'linf':
@@ -72,6 +74,7 @@ class block_vec(block_container):
                 ran = numpy.random.random(self[i].local_size())
                 ran -= MPI.sum(self[i].mpi_comm(), sum(ran))/self[i].size()
                 self[i].set_local(ran)
+                self[i].apply('')
             elif hasattr(self[i], '__len__'):
                 ran = numpy.random.random(len(self[i]))
                 ran -= MPI.sum(self[i].mpi_comm(), sum(ran))/MPI.sum(len(ran))

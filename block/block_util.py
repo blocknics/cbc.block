@@ -24,6 +24,7 @@ def sign_of(op):
     else:
         x = op.create_vec(dim=1)
         x.set_local(random(x.local_size()))
+        x.apply('')
         return -1 if x.inner(op*x) < 0 else 1
 
 def mult(op, x, transposed=False):

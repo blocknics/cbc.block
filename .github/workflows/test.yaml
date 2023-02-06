@@ -43,6 +43,10 @@ jobs:
         run: |
           demo/regression-test.sh --coverage
 
+      - name: Run regression tests with MPI
+        run: |
+          demo/regression-test.sh --mpirun
+
       - name: Coverage report
         run: |
           coverage combine

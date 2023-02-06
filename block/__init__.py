@@ -11,6 +11,7 @@ In addition, methods are injected into dolfin.Matrix / dolfin.Vector as
 needed.
 """
 
+from .helpers import supports_mpi
 from .block_mat import block_mat
 from .block_vec import block_vec
 from .block_compose import block_mul, block_add, block_sub, block_transpose

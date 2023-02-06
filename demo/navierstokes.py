@@ -16,9 +16,7 @@ from block.iterative import *
 from block.algebraic.petsc import *
 
 set_log_level(15)
-if MPI.size(MPI.comm_world) > 1:
-    print ("Navier-Stokes demo does not work in parallel because of old-style XML mesh files")
-    exit()
+supports_mpi(False, "Navier-Stokes demo does not work in parallel because of old-style XML mesh files")
 
 # Load mesh and subdomains
 path = os.path.join(os.path.dirname(__file__), '')
