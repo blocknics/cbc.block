@@ -388,6 +388,10 @@ class RA(Precond):
         # set extra amg parameters
         parameters = parameters if (parameters and isinstance(parameters, dict)) \
             else {'coefs': [1.0, 0.0], 'pwrs': [0.5, 0.0]}
+        # Overwrite default accuracy in RA
+        ra_tol = parameters.get('AAA_tol', 1E-10)
+        parameters['AAA_tol'] = ra_tol
+        
         haznics.param_amg_set_dict(parameters, amgparam)
 
         # print (relevant) amg parameters
@@ -404,7 +408,7 @@ class RA(Precond):
         # set RA preconditioner #
         precond = haznics.create_precond_ra(A_ptr, M_ptr, s_power, t_power,
                                             alpha, beta, scaling_a, scaling_m,
-                                            amgparam)
+                                            ra_tol, amgparam)
 
         # if fail, setup returns null
         if not precond:
