@@ -51,7 +51,7 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
         elif hasattr(v, 'norm'):
             return v.norm('l2')
         else:
-            return np.sqrt(np.sum(v**2)/len(v))
+            return np.sqrt(np.sum(v**2))
 
     fname = _regr_root() / f'{quote_plus(prefix)}.{quote_plus(name)}.pickle'
     if fname.exists():
