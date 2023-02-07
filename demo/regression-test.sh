@@ -15,11 +15,13 @@
 
 set -e
 
+PARALLEL=-P4
 if [[ $1 == "--coverage" ]]; then
     export BLOCK_REGRESSION_COVERAGE=1
     shift
 elif [[ $1 == "--mpirun" ]]; then
     export BLOCK_REGRESSION_MPIRUN=1
+    PARALLEL=
     shift
 fi
 
@@ -47,6 +49,6 @@ export BLOCK_REGRESSION_ABORT=1
 
 demos=$(find "${0%/*}" -name \*.py)
 
-xargs -P4 -n1 "$0" <<<$demos
+xargs $PARALLEL -n1 "$0" <<<$demos
 
 ps -o etime,cputime $$
