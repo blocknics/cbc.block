@@ -29,13 +29,11 @@ def block_assemble(lhs, rhs=None, bcs=None,
                  'symm_mod error'  : 'symmetric_mod argument only accepted when assembling a vector',
                  'not square'      : 'A must be square for symmetric assembling',
                  'invalid bcs'     : 'Expecting a list or list of lists of DirichletBC.',
-                 'invalid signs'   : 'signs should be a list of length n containing only 1 or -1',
-                 'mpi and symm'    : 'Symmetric application of BC not yet implemented in parallel'}
+                 'invalid signs'   : 'signs should be a list of length n containing only 1 or -1'}
     # Check arguments
     from numpy import ndarray
     has_rhs = True if isinstance(rhs, ndarray) else rhs != None
     has_lhs = True if isinstance(rhs, ndarray) else rhs != None
-    supports_mpi(not symmetric)
 
     if has_lhs and has_rhs:
         A, b = list(map(block_tensor,[lhs,rhs]))

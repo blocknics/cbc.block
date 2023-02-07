@@ -9,7 +9,7 @@ from block.algebraic.petsc import *
 
 import dolfin
 
-supports_mpi(False)
+supports_mpi(False, 'numpy demo does not work in parallel')
 
 class numpy_op(block_base):
     from block.object_pool import vec_pool

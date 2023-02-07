@@ -11,7 +11,7 @@
 # their coverage checked. Use "coverage combine" then "coverage report" to
 # inspect results.
 #
-# If --mpirun is set, the demos are run with mpi. Most will fail.
+# If --mpirun is set, the demos are run with mpi.
 
 set -e
 
