@@ -49,7 +49,7 @@ Bugs, questions, contributions: Visit <http://github.com/blocknics/cbc.block>.
 
 Status (master branch)
 ----------------------
-![Regression test status](https://github.com/blocknics/cbc.block/actions/workflows/test.yaml/badge.svg?branch=master)
+![Regression test status](https://github.com/blocknics/cbc.block/actions/workflows/test.yaml/badge.svg)
 
 [Full test coverage report](https://blocknics.github.io/cbc.block/htmlcov/)
 
