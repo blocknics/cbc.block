@@ -79,17 +79,17 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
         except Exception as e:
             _log_or_raise(f'Failed to compute error norm: {e}')
         else:
-            rdiff = err_norm / max(ref_norm,1)
-            if rdiff > rtol:
-                _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > {rtol:.3g}) ({prefix})')
-            elif show:
+            rdiff = err_norm / max(ref_norm, len(cur_vec))
+            if show:
                 print(f'Norm of {name}: {cur_norm:.4f}, error: {err_norm:.4g}')
+            if rdiff > rtol:
+                _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > rtol {rtol:.3g}) ({prefix})')
     elif ref_norm is not None:
-        rdiff = abs(cur_norm - ref_norm) / max(ref_norm,1)
-        if rdiff > rtol:
-            _log_or_raise(f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > {rtol:.3g})')
+        rdiff = abs(cur_norm - ref_norm) / max(ref_norm, len(cur_vec))
         if show:
             print(f'Norm of {name}: {cur_norm:.4f}')
+        if rdiff > rtol:
+            _log_or_raise(f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > rtol {rtol:.3g})')
     if is_serial and ref_iter is not None:
         if cur_iter is None or not ref_iter/itol <= cur_iter <= ref_iter*itol:
             _log_or_raise(f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations ({prefix})')

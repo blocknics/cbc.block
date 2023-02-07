@@ -1,0 +1,76 @@
+name: Install dependencies
+
+inputs:
+  python-version:
+    description: Python version to install
+    required: true
+    type: string
+
+runs:
+  using: composite
+  steps:
+    - name: Setup conda-forge
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          activate-environment: dolfin
+          python-version: ${{ inputs.python-version }}
+          use-mamba: true
+
+    - name: Prepare cache
+      shell: bash -el {0}
+      run: |
+        if [[ $CONDA != /opt/conda ]]; then
+          mkdir -p /opt/conda/
+          ln -s $CONDA/envs /opt/conda/envs
+        fi
+        echo CONDA=$CONDA
+        mamba env list
+
+    #- name: Set cache date (lifetime)
+    #  run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+    - name: Environment cache
+      uses: actions/cache@v3
+      with:
+        path: /opt/conda/envs/dolfin
+        #key: env-conda-dolfin-${{ inputs.python-version }}-${{ hashFiles(format('{0}/**', github.action_path)) }}
+        key: env-conda-dolfin-${{ inputs.python-version }}-${{ hashFiles('.github/actions/install-dependencies/*') }}
+      id: cache
+
+    - name: Install fenics
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash -el {0}
+      run: |
+        mamba install pip fenics-dolfin scipy python==${{ inputs.python-version }}
+
+    - name: Install haznics
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash -el {0}
+      run: |
+        mamba env list
+        mamba install compilers c-compiler cxx-compiler fortran-compiler cmake>=3.15 make swig
+
+        HAZ_VER=1.0.1
+        git clone --branch v${HAZ_VER} --depth 1 https://github.com/HAZmathTeam/hazmath
+        cd hazmath
+
+        sed -i -e '/cmake_minimum_required/s/3.12/3.15/' CMakeLists.txt
+        make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes
+        make install
+        cp -a swig_files haznics
+        mv haznics/haznics.py haznics/__init__.py
+        cat >setup.py <<EOF
+        from distutils.core import setup
+        setup(name='haznics', version='${HAZ_VER}', packages=['haznics'],
+              package_data={'haznics': ['_haznics.so']})
+        EOF
+        python -m pip install .
+        cp lib/libhazmath.so /opt/conda/envs/dolfin/lib/
+
+    - name: Install utilities
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash -el {0}
+      run: |
+        pip install pytest
