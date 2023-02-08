@@ -36,7 +36,7 @@ if (( $# )); then
         cmd="python3"
     fi
     if [[ -n $BLOCK_REGRESSION_MPIRUN ]]; then
-        cmd="mpirun -np 3 $cmd"
+        cmd="mpirun -np 2 $cmd"
     fi
     echo $cmd $1
     # exit code 255 makes xargs abort immediately
