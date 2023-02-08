@@ -32,18 +32,23 @@ class precond(block_base):
         # that precisely matches the supplied options. The user can override
         # this prefix if necessary.
         if prefix is None:
-            prefix = self.__class__.__name__ # prettier proxy for defaults
+            # Use class name instead of hash of defaults (we assume defaults
+            # are constant for a given class)
+            prefix = self.__class__.__name__
             if options:
                 sha = hashlib.sha256(str(tuple(sorted(options.items()))).encode())
                 prefix += sha.hexdigest()[:8]
             prefix += ':'
 
         self.optsDB = PETSc.Options(prefix)
-        for params in [options or {}, defaults]:
-            for key, val in params.items():
-                # Allow overriding defaults by setting key='del'
-                if val!='del' and not self.optsDB.hasName(key):
-                    self.optsDB.setValue(key, val)
+        params = defaults.copy()
+        if options:
+            params.update(options)
+        for key, val in params.items():
+            # Allow overriding defaults by setting key='del'. Command-line
+            # options (already in optsDB) are never overwritten.
+            if val!='del' and not self.optsDB.hasName(key):
+                self.optsDB.setValue(key, val)
 
         if prectype == PETSc.PC.Type.HYPRE and nullspace:
             if not all(self.optsDB.hasName(n) for n in ['pc_hypre_boomeramg_nodal_coarsen', 'pc_hypre_boomeramg_vec_interp_variant']):
