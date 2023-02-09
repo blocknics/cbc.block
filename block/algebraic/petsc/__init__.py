@@ -18,3 +18,4 @@ _init()
 
 from .precond import *
 from .matrix import *
+from .solver import *
