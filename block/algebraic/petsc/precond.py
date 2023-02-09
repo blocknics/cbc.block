@@ -116,7 +116,7 @@ class ML(precond):
 
 class ILU(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        supports_mpi(False, 'PetSC ILU does not work in parallel', mat(A).comm.size)
+        supports_mpi(False, 'PETSc ILU does not work in parallel', mat(A).comm.size)
         super().__init__(A, PETSc.PC.Type.ILU, pdes, nullspace, options=parameters, prefix=prefix)
 
 class Cholesky(precond):
@@ -204,7 +204,7 @@ class SOR(precond):
                              #"tmp_pc_sor_local_backward": "",  
                              #"tmp_pc_sor_local_forward": "",
                          })
-        supports_mpi(not self.optsDB.hasName('pc_sor_symmetric'), 'PetSC symmetric SOR not supported in parallel', mat(A).comm.size)
+        supports_mpi(not self.optsDB.hasName('pc_sor_symmetric'), 'PETSc symmetric SOR not supported in parallel', mat(A).comm.size)
 
 
 class Elasticity(precond):
