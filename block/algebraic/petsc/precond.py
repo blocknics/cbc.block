@@ -11,9 +11,37 @@ import hashlib
 from time import time
 from dolfin import info
 
+class petsc_base(block_base):
+    @classmethod
+    def _merge_options(cls, prefix, options, defaults):
+        # The PETSc options database is global, so we create a unique prefix
+        # that precisely matches the supplied options. The user can override
+        # this prefix if necessary.
+        if prefix is None:
+            # Use class name instead of hash of defaults (we assume defaults
+            # are constant for a given class)
+            prefix = cls.__name__
+            if options:
+                sha = hashlib.sha256(str(tuple(sorted(options.items()))).encode())
+                prefix += sha.hexdigest()[:8]
+            prefix += ':'
 
-class precond(block_base):
-    def __init__(self, A, prectype, pdes, nullspace, prefix, options, V=None, create_cb=None, defaults={}):
+        optsDB = PETSc.Options(prefix)
+        params = defaults.copy()
+        if options:
+            params.update(options)
+        for key, val in params.items():
+            # Allow overriding defaults by setting key='del'. Command-line
+            # options (already in optsDB) are never overwritten.
+            if val!='del' and not optsDB.hasName(key):
+                optsDB.setValue(key, val)
+        return prefix, optsDB
+
+    def down_cast(self):
+        return self.petsc_op
+
+class precond(petsc_base):
+    def __init__(self, A, prectype, pdes, nullspace, prefix, options, V=None, defaults={}):
         Ad = mat(A)
 
         if nullspace:
@@ -22,50 +50,30 @@ class precond(block_base):
             if isscalar(nullspace):
                 ns.create(constant=True)
             else:
-                ns.create(constant=False, vectors=[v.down_cast().vec() for v in nullspace])
+                ns.create(constant=False, vectors=[vec(v) for v in nullspace])
             try:
                 Ad.setNearNullSpace(ns)
             except:
                 info('failed to set near null space (not supported in petsc4py version)')
 
-        # The PETSc options database is global, so we create a unique prefix
-        # that precisely matches the supplied options. The user can override
-        # this prefix if necessary.
-        if prefix is None:
-            # Use class name instead of hash of defaults (we assume defaults
-            # are constant for a given class)
-            prefix = self.__class__.__name__
-            if options:
-                sha = hashlib.sha256(str(tuple(sorted(options.items()))).encode())
-                prefix += sha.hexdigest()[:8]
-            prefix += ':'
-
-        self.optsDB = PETSc.Options(prefix)
-        params = defaults.copy()
-        if options:
-            params.update(options)
-        for key, val in params.items():
-            # Allow overriding defaults by setting key='del'. Command-line
-            # options (already in optsDB) are never overwritten.
-            if val!='del' and not self.optsDB.hasName(key):
-                self.optsDB.setValue(key, val)
+        prefix, self.optsDB = self._merge_options(prefix=prefix, options=options, defaults=defaults)
 
         if prectype == PETSc.PC.Type.HYPRE and nullspace:
             if not all(self.optsDB.hasName(n) for n in ['pc_hypre_boomeramg_nodal_coarsen', 'pc_hypre_boomeramg_vec_interp_variant']):
                 print('Near null space is ignored by hypre UNLESS you also supply pc_hypre_boomeramg_nodal_coarsen and pc_hypre_boomeramg_vec_interp_variant')
 
         self.A = A
-        self.petsc_prec = PETSc.PC().create(V.mesh().mpi_comm() if V else None)
-        self.petsc_prec.setOptionsPrefix(prefix)
+        self.petsc_op = PETSc.PC().create(V.mesh().mpi_comm() if V else None)
+        self.petsc_op.setOptionsPrefix(prefix)
         try:
-            self.petsc_prec.setType(prectype)
+            self.petsc_op.setType(prectype)
         except PETSc.Error as e:
             if e.ierr == 86:
                 raise ValueError(f'Unknown PETSc type "{prectype}"')
             else:
                 raise
-        self.petsc_prec.setOperators(Ad)
-        self.petsc_prec.setFromOptions()
+        self.petsc_op.setOperators(Ad)
+        self.petsc_op.setFromOptions()
 
         self.setup_time = -1.
 
@@ -74,10 +82,10 @@ class precond(block_base):
         if self.setup_time < 0:
             T = time()
             # Create preconditioner based on the options database
-            self.petsc_prec.setUp()
+            self.petsc_op.setUp()
 
             setup_time = time()-T
-            comm = self.petsc_prec.getComm().tompi4py()
+            comm = self.petsc_op.getComm().tompi4py()
             
             setup_time = comm.allreduce(setup_time)/comm.size
             info('constructed %s preconditioner in %.2f s'%(self.__class__.__name__, setup_time))
@@ -92,18 +100,14 @@ class precond(block_base):
             raise RuntimeError(
                 'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
 
-        self.petsc_prec.apply(b.down_cast().vec(), x.down_cast().vec())
+        self.petsc_op.apply(vec(b), vec(x))
         return x
-
-    def down_cast(self):
-        return self.petsc_prec
 
     def __str__(self):
         return '<%s prec of %s>'%(self.__class__.__name__, str(self.A))
 
     def create_vec(self, dim=1):
         return self.A.create_vec(dim)
-
 
 class ML(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
@@ -155,7 +159,7 @@ class SUPERLU_LU(LU):
                          defaults={
                              'pc_factor_mat_solver_package': 'superlu',
                          })
-        self.petsc_prec.setFactorPivot(1E-16)
+        self.petsc_op.setFactorPivot(1E-16)
 
 class AMG(precond):
     """
@@ -298,15 +302,15 @@ class HypreAMS(precond):
                          defaults={
                              'pc_hypre_type': 'ams',
                          })
-        self.petsc_prec.setHYPREDiscreteGradient(mat(G))
+        self.petsc_op.setHYPREDiscreteGradient(mat(G))
 
         # Constants
         constants = [vec(df.interpolate(df.Constant(c), V).vector())
                      for c in np.eye(mesh.geometry().dim())]
-        self.petsc_prec.setHYPRESetEdgeConstantVectors(*constants)
+        self.petsc_op.setHYPRESetEdgeConstantVectors(*constants)
 
         # NOTE: signal that we don't have lower order term
-        ams_zero_beta_poisson and self.petsc_prec.setHYPRESetBetaPoissonMatrix(None)
+        ams_zero_beta_poisson and self.petsc_op.setHYPRESetBetaPoissonMatrix(None)
 
 
 class HypreADS(precond):
@@ -387,6 +391,6 @@ class HypreADS(precond):
                              'pc_hypre_type': 'ads',
                          })
         # Attach auxiliary operators
-        self.petsc_prec.setHYPREDiscreteGradient(G)
-        self.petsc_prec.setHYPREDiscreteCurl(G)
-        self.petsc_prec.setCoordinates(xyz)
+        self.petsc_op.setHYPREDiscreteGradient(G)
+        self.petsc_op.setHYPREDiscreteCurl(G)
+        self.petsc_op.setCoordinates(xyz)
