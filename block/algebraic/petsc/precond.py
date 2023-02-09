@@ -195,7 +195,7 @@ class SOR(precond):
         options.update(PETSc.Options().getAll())
         if parameters:
             options.update(parameters)
-        supports_mpi(not 'pc_sor_symmetric' in options, 'PetSC symmetric SOR not supported in parallel')
+        supports_mpi(not 'pc_sor_symmetric' in options, 'PETSc symmetric SOR not supported in parallel')
         precond.__init__(self, A, PETSc.PC.Type.SOR, options, pdes, nullspace)
 
 
