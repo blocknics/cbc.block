@@ -1,4 +1,4 @@
-from block import block_mat, block_vec
+from block import block_mat, block_vec, supports_mpi
 from block.block_base import block_base, block_container
 from block.object_pool import vec_pool
 from dolfin import GenericVector, Matrix, PETScVector
@@ -96,6 +96,8 @@ class petsc_py_wrapper:
 
 class petsc_solver(petsc_base):
     def __init__(self, A, precond, V, ksp_type, prefix, options, defaults={}):
+        supports_mpi(False, 'PETSc solver interface currently does not work in parallel')
+
         self.A = A
         self.Ad = mat(A)
 
