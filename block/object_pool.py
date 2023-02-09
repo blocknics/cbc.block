@@ -1,7 +1,6 @@
-from builtins import object
 import sys
 
-class object_pool(object):
+class object_pool:
     """Manage a free-list of objects. The objects are automatically made
     available as soon as they are deleted by the caller. The assumption is that
     any operation is repeated a number of times (think iterative solvers), so
@@ -10,21 +9,17 @@ class object_pool(object):
     object (typically a Matrix) is deleted.
     """
     def __init__(self):
-        self.all = set()
-        self.free = []
+        self.all = []
 
     def add(self, obj):
-        self.all.add(obj)
+        self.all.append(obj)
 
     def get(self):
-        self.collect()
-        return self.free.pop()
-
-    def collect(self):
         for obj in self.all:
             if sys.getrefcount(obj) == 3:
                 # 3 references: self.all, obj, getrefcount() parameter
-                self.free.append(obj)
+                return obj
+
 
 def shared_vec_pool(func):
     """Decorator for create_vec, which creates a per-object pool of (memoized)
@@ -32,13 +27,14 @@ def shared_vec_pool(func):
     where it is known that the row and columns are distributed equally.
     """
     def pooled_create_vec(self, dim=1):
-        if not hasattr(self, '_vec_pool'):
-            self._vec_pool = object_pool()
         try:
-            vec = self._vec_pool.get()
-        except IndexError:
+            vec_pool = self._vec_pool
+        except AttributeError:
+            vec_pool = self._vec_pool = object_pool()
+        vec = vec_pool.get()
+        if vec is None:
             vec = func(self, dim)
-            self._vec_pool.add(vec)
+            vec_pool.add(vec)
         return vec
     pooled_create_vec.__doc__ = func.__doc__
     return pooled_create_vec
@@ -47,15 +43,16 @@ def vec_pool(func):
     """Decorator for create_vec, which creates a per-object pool of (memoized)
     returned vectors per dimension.
     """
-    from collections import defaultdict
     def pooled_create_vec(self, dim=1):
-        if not hasattr(self, '_vec_pool'):
-            self._vec_pool = defaultdict(object_pool)
         try:
-            vec = self._vec_pool[dim].get()
-        except IndexError:
+            vec_pools = self._vec_pools
+        except AttributeError:
+            vec_pools = self._vec_pools = [object_pool(), object_pool()]
+        vec_pool = vec_pools[dim]
+        vec = vec_pool.get()
+        if vec is None:
             vec = func(self, dim)
-            self._vec_pool[dim].add(vec)
+            vec_pool.add(vec)
         return vec
     pooled_create_vec.__doc__ = func.__doc__
     return pooled_create_vec

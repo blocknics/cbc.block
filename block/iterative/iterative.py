@@ -46,12 +46,12 @@ class iterative(block_base):
         # scalars (although they are normally converted to vectors by bc
         # application). To be sure, call allocate() on them.
 
-        if isinstance(b, block_vec):
+        if isinstance(b, block_vec) and not b.allocated():
             # Create a shallow copy to call allocate() on, to avoid changing the caller's copy of b
             b = block_vec(len(b), b.blocks)
             b.allocate(self.A, dim=0)
 
-        if self.initial_guess:
+        if self.initial_guess is not None:
             # Most (all?) solvers modify x, so make a copy to avoid changing
             # the caller's copy of x
             from block.block_util import copy
@@ -136,19 +136,21 @@ class iterative(block_base):
                  iter=None, maxiter=None, name=None, show=None, rprecond=None,
                  nonconvergence_ok=None, callback=None):
         """Allow changing the parameters within an expression, e.g. x = Ainv(initial_guess=x) * b"""
-        if precond       is not None: self.B = precond
-        if rprecond      is not None: self.R = rprecond
-        if initial_guess is not None: self.initial_guess = initial_guess
-        if nonconvergence_ok is not None: self.nonconvergence_ok = nonconvergence_ok
-        if show          is not None: self.show = show
-        if name          is not None: self.name = name
-        if tolerance     is not None: self.tolerance = tolerance
-        if maxiter       is not None: self.maxiter = maxiter
-        if callback      is not None: self.callback = callback
+        import copy
+        ret = copy.copy(self) # shallow copy
+        if precond       is not None: ret.B = precond
+        if rprecond      is not None: ret.R = rprecond
+        if initial_guess is not None: ret.initial_guess = initial_guess
+        if nonconvergence_ok is not None: ret.nonconvergence_ok = nonconvergence_ok
+        if show          is not None: ret.show = show
+        if name          is not None: ret.name = name
+        if tolerance     is not None: ret.tolerance = tolerance
+        if maxiter       is not None: ret.maxiter = maxiter
+        if callback      is not None: ret.callback = callback
         if iter is not None:
-            self.tolerance = 0
-            self.maxiter = iter
-        return self
+            ret.tolerance = 0
+            ret.maxiter = iter
+        return ret
 
     @property
     def AR(self):

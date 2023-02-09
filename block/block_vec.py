@@ -1,9 +1,5 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
 from .block_base import block_container
+import numpy as np
 
 class block_vec(block_container):
     """Class defining a block vector suitable for multiplication with a
@@ -18,37 +14,38 @@ class block_vec(block_container):
             m = len(m)
         block_container.__init__(self, m, blocks)
 
-    def allocate(self, template, dim=0):
+    def allocated(self):
+        """Check whether all blocks are proper vectors."""
+        from dolfin import GenericVector
+        return all(isinstance(block, GenericVector) for block in self)
+
+    def allocate(self, template, dim=None):
         """Make sure all blocks are proper vectors. Any non-vector blocks are
         replaced with appropriately sized vectors (where the sizes are taken
         from the template, which should be a block_mat or a list of
         DirichletBCs or FunctionSpaces). If dim==0, newly allocated vectors use
         layout appropriate for b (in Ax=b); if dim==1, the layout for x is
         used."""
+        if np.ndim(template) == 1 and dim is not None:
+            raise ValueError('Cannot specify dim with 1D template')
+        elif np.ndim(template) == 2 and dim is None:
+            raise ValueError('2D template requires specified dim')
         from dolfin import GenericVector
         from .block_mat import block_mat
+        from .block_util import create_vec_from
         for i in range(len(self)):
             if isinstance(self[i], GenericVector):
                 continue
-            if isinstance(template, block_mat):
-                val = self[i]
-                for j in range(len(self)):
-                    A = template[i,j] if dim==0 else template[j,i]
-                    try:
-                        self[i] = A.create_vec(dim)
-                        break
-                    except AttributeError:
-                        pass
-            else:
-                from .block_util import create_vec_from
-                try:
-                    self[i] = create_vec_from(template[i])
-                except RuntimeError:
-                    pass
+            val = self[i]
+            try:
+                self[i] = create_vec_from(template[:,i] if dim==1 else template[i], dim)
+            except ValueError:
+                pass
             if not isinstance(self[i], GenericVector):
-                print (type(self[i]))
-                raise RuntimeError("Can't allocate vector - no usable template for block %d.\n"%i +
-                                   "Consider calling something like bb.allocate([V, Q]) to initialise the block_vec.")
+                raise ValueError(
+                    f"Can't allocate vector - no usable template for block {i}.\n"
+                    "Consider calling something like bb.allocate([V, Q]) to initialise the block_vec."
+                )
             self[i][:] = val or 0.0
 
     def norm(self, ntype='l2'):
