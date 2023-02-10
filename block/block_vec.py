@@ -19,17 +19,13 @@ class block_vec(block_container):
         from dolfin import GenericVector
         return all(isinstance(block, GenericVector) for block in self)
 
-    def allocate(self, template, dim=None):
+    def allocate(self, template, dim=None, alternative_templates=[]):
         """Make sure all blocks are proper vectors. Any non-vector blocks are
         replaced with appropriately sized vectors (where the sizes are taken
         from the template, which should be a block_mat or a list of
         DirichletBCs or FunctionSpaces). If dim==0, newly allocated vectors use
         layout appropriate for b (in Ax=b); if dim==1, the layout for x is
         used."""
-        if np.ndim(template) == 1 and dim is not None:
-            raise ValueError('Cannot specify dim with 1D template')
-        elif np.ndim(template) == 2 and dim is None:
-            raise ValueError('2D template requires specified dim')
         from dolfin import GenericVector
         from .block_mat import block_mat
         from .block_util import create_vec_from
@@ -39,8 +35,13 @@ class block_vec(block_container):
             val = self[i]
             try:
                 self[i] = create_vec_from(template[:,i] if dim==1 else template[i], dim)
-            except ValueError:
-                pass
+            except Exception:
+                for tmpl in alternative_templates:
+                    try:
+                        self[i] = create_vec_from(tmpl[:,i] if dim==1 else tmpl[i], dim)
+                        break
+                    except Exception:
+                        pass
             if not isinstance(self[i], GenericVector):
                 raise ValueError(
                     f"Can't allocate vector - no usable template for block {i}.\n"
@@ -76,36 +77,25 @@ class block_vec(block_container):
                 ran -= MPI.sum(self[i].mpi_comm(), sum(ran))/MPI.sum(len(ran))
                 self[i][:] = ran
             else:
-                raise RuntimeError(
-                    'block %d in block_vec has no size -- use a proper vector or call allocate(A)' % i)
-
-    def apply_bc(self, bcs):
-        """Apply Dirichlet boundary conditions, in a time loop for example,
-        when boundary conditions change. If the original vector was modified
-        for symmetry, it will remain so (since the BC dofs are not changed by
-        symmetry), but if any vectors have been individually reassembled then
-        it needs careful thought. It is probably better to just reassemble the
-        whole block_vec using block_assemble()."""
-        from .block_util import create_vec_from, wrap_in_list
-        from dolfin import GenericVector
-        for i in range(len(self)):
-            if not isinstance(self[i], GenericVector):
-                vec = create_vec_from(bcs[i])
-                vec[:] = self[i]
-                self[i] = vec
-            for bc in wrap_in_list(bcs[i]):
-                bc.apply(self[i])
+                raise ValueError(
+                    f'block {i} in block_vec has no size -- use a proper vector or call allocate(A, dim=d)')
 
     #
     # Map operator on the block_vec to operators on the individual blocks.
     #
 
-    def _map_operator(self, operator, inplace=False):
-        y = block_vec(len(self))
+    def _map_operator(self, operator, inplace=False, args_fn=lambda i: (), filter_fn=None):
+        y = self if inplace else block_vec(len(self))
         for i in range(len(self)):
             try:
-                y[i] = getattr(self[i], operator)()
-            except (Exception, e):
+                args = args_fn(i)
+                if filter_fn is None or filter_fn(args):
+                    v = getattr(self[i], operator)(*args_fn(i))
+                    if isinstance(v, type(NotImplemented)):
+                        raise NotImplementedError()
+                    if not inplace:
+                        y[i] = v
+            except Exception as e:
                 if i==0 or not inplace:
                     raise e
                 else:
@@ -113,35 +103,11 @@ class block_vec(block_container):
                         "operator partially applied, block %d does not support '%s' (err=%s)" % (i, operator, str(e)))
         return y
 
-    def _map_scalar_operator(self, operator, x, inplace=False):
-        try:
-            x = float(x)
-        except:
-            return NotImplemented
-        y = self if inplace else block_vec(len(self))
-        for i in range(len(self)):
-            v = getattr(self[i], operator)(x)
-            if isinstance(v, type(NotImplemented)):
-                if i==0 or not inplace:
-                    return NotImplemented
-                else:
-                    raise RuntimeError(
-                        "operator partially applied, block %d does not support '%s'" % (i, operator))
-            y[i] = v
-        return y
+    def _map_scalar_operator(self, operator, x, inplace=False, filter_fn=None):
+        return self._map_operator(operator, args_fn=lambda i: (float(x),), inplace=inplace)
 
-    def _map_vector_operator(self, operator, x, inplace=False):
-        y = self if inplace else block_vec(len(self))
-        for i in range(len(self)):
-            v = getattr(self[i], operator)(x[i])
-            if isinstance(v, type(NotImplemented)):
-                if i==0 or not inplace:
-                    return NotImplemented
-                else:
-                    raise RuntimeError(
-                        "operator partially applied, block %d does not support '%s'" % (i, operator))
-            y[i] = v
-        return y
+    def _map_vector_operator(self, operator, x, inplace=False, filter_fn=None):
+        return self._map_operator(operator, args_fn=lambda i: (x[i],), inplace=inplace)
 
     def _map_any_operator(self, operator, x, inplace=False):
         if hasattr(x, '__iter__'):
@@ -156,26 +122,24 @@ class block_vec(block_container):
         for i in range(m):
             y[i] = block_util.copy(self[i])
         return y
-    
-    def zero(self): return self._map_operator('zero', True)
+
+    def zero(self): return self._map_operator('zero', inplace=True)
 
     def __add__ (self, x): return self._map_vector_operator('__add__',  x)
     def __radd__(self, x): return self._map_vector_operator('__radd__', x)
-    def __iadd__(self, x): return self._map_vector_operator('__iadd__', x, True)
+    def __iadd__(self, x): return self._map_vector_operator('__iadd__', x, inplace=True)
 
     def __sub__ (self, x): return self._map_any_operator('__sub__',  x)
     def __rsub__(self, x): return self._map_vector_operator('__rsub__', x)
-    def __isub__(self, x): return self._map_vector_operator('__isub__', x, True)
+    def __isub__(self, x): return self._map_vector_operator('__isub__', x, inplace=True)
 
     def __mul__ (self, x): return self._map_scalar_operator('__mul__',  x)
     def __rmul__(self, x): return self._map_scalar_operator('__rmul__', x)
-    def __imul__(self, x): return self._map_scalar_operator('__imul__', x, True)
+    def __imul__(self, x): return self._map_scalar_operator('__imul__', x, inplace=True)
 
-    def inner(self, x):
-        y = self._map_vector_operator('inner', x)
-        if isinstance(y, type(NotImplemented)):
-            raise NotImplementedError('One or more blocks do not implement .inner()')
-        return sum(y)
+    def inner(self, x):    return sum(self._map_vector_operator('inner', x))
+    def scale_by(self, x): return self._map_vector_operator('__imul__', x, inplace=True,
+                                                            filter_fn=lambda x: x != (1,))
 
     def get_local(self):    return self._map_operator('get_local')
     def set_local(self, x): return self._map_vector_operator('set_local', x, inplace=True)

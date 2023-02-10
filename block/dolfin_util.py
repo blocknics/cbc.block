@@ -193,9 +193,11 @@ def rigid_body_modes(V, show_plot=False):
     basis.orthonormalize()
 
     if show_plot:
+        import matplotlib.pyplot as plt
         for mode in modes:
+            plt.figure()
             plot(Function(V,mode))
-        interactive()
+        plt.show()
 
     info("computed rigid body modes in %.2f s"%(timer.time()-T))
     return modes

@@ -143,10 +143,14 @@ def _collapse_bc(bc):
 
 def split_bcs(bcs, m):
     # return a list of lists of DirichletBC for use with cbc.block
-    # we need the number of blocks m to ensure correct length of output list
+    # we need the number of blocks m to ensure correct length of output list;
+    # if m is None, the list will stop at the last active BC
+    bc_map = [_collapse_bc(bc) for bc in bcs]
+    if m is None:
+        m = max(i for i,_ in bc_map)+1
+
     collapsed_bcs = [[] for i in range(m)]
-    
-    for i, bc_i in map(_collapse_bc, bcs):
+    for i, bc_i in bc_map:
         collapsed_bcs[i].append(bc_i)
 
     return collapsed_bcs

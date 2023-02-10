@@ -1,7 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 def isequal(op1, op2, eps=1e-3):
     from . import block_vec
     v = op1.create_vec()
@@ -20,6 +16,15 @@ def issymmetric(op):
     opx = op*x
     err = (opx - op.T*x).norm('l2')/opx.norm('l2')
     return (err < 1e-6)
+
+def sign_of(op):
+    from numpy.random import random
+    if isscalar(op):
+        return -1 if op < 0 else 1
+    else:
+        x = op.create_vec(dim=1)
+        x.set_local(random(x.local_size()))
+        return -1 if x.inner(op*x) < 0 else 1
 
 def mult(op, x, transposed=False):
     if not transposed or isscalar(op):
@@ -117,3 +122,17 @@ def flatten(l):
                 yield sub
     else:
         yield l
+
+def create_diagonal_matrix(V, val=1.0):
+    from dolfin import TrialFunction, TestFunction
+    from dolfin import assemble, Constant, inner, dx
+    import numpy
+
+    u,v = TrialFunction(V),TestFunction(V)
+    Z = assemble(Constant(0)*inner(u,v)*dx)
+    if val != 0.0:
+        idx = numpy.arange(*Z.local_range(0), dtype=numpy.intc)
+        Z.ident(idx)
+        if val != 1.0:
+            Z *= val
+    return Z
