@@ -2,6 +2,7 @@ from __future__ import division
 
 from builtins import str
 from block.block_base import block_base
+from block.helpers import supports_mpi
 from block.object_pool import vec_pool
 from petsc4py import PETSc
 import dolfin as df
@@ -102,6 +103,7 @@ class ML(precond):
 
 class ILU(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None):
+        supports_mpi(False)
         precond.__init__(self, A, PETSc.PC.Type.ILU, parameters, pdes, nullspace)
 
 class Cholesky(precond):
@@ -193,6 +195,7 @@ class SOR(precond):
         options.update(PETSc.Options().getAll())
         if parameters:
             options.update(parameters)
+        supports_mpi(not 'pc_sor_symmetric' in options, 'PETSc symmetric SOR not supported in parallel')
         precond.__init__(self, A, PETSc.PC.Type.SOR, options, pdes, nullspace)
 
 

@@ -28,9 +28,7 @@ from block.algebraic.petsc import *
 
 import os
 
-#if MPI.size(None) > 1:
-#    print ("Stokes demo does not work in parallel because of old-style XML mesh files")
-#    exit()
+supports_mpi(False, "Stokes demo does not work in parallel because of old-style XML mesh files")
 
 # Load mesh and subdomains
 path = os.path.join(os.path.dirname(__file__), '')

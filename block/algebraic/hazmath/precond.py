@@ -1,5 +1,5 @@
 from block.block_base import block_base
-from block import block_mat
+from block import block_mat, supports_mpi
 from builtins import str
 from petsc4py import PETSc
 from scipy.sparse import csr_matrix
@@ -195,9 +195,12 @@ class Precond(block_base):
     """
     Class of general preconditioners from HAZmath using SWIG
 
+    Note: Parallel execution (MPI) not supported.
     """
 
     def __init__(self, A, prectype=None, parameters=None, amg_parameters=None, precond=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # haznics.dCSRmat* type (assert?)
         self.A = A
         # python dictionary of parameters
@@ -314,6 +317,8 @@ class AMG(Precond):
     """
 
     def __init__(self, A, parameters=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # change data type for the matrix (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
 
@@ -345,6 +350,8 @@ class FAMG(Precond):
     """
 
     def __init__(self, A, M, parameters=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # change data type for the matrices (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
         M_ptr = PETSc_to_dCSRmat(M)
@@ -378,6 +385,8 @@ class RA(Precond):
     """
 
     def __init__(self, A, M, parameters=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # change data type for the matrices (to dCSRmat pointer)
         A_ptr = PETSc_to_dCSRmat(A)
         M_ptr = PETSc_to_dCSRmat(M)
@@ -422,6 +431,8 @@ class HXCurl(Precond):
     """
 
     def __init__(self, Acurl, V, parameters=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # get auxiliary operators
         mesh = V.mesh()
         Pc = Pcurl(mesh)
@@ -484,6 +495,8 @@ class HXDiv(Precond):
     """
 
     def __init__(self, Adiv, V, parameters=None):
+        supports_mpi(False, 'HAZMath does not work in parallel')
+
         # get auxiliary operators
         mesh = V.mesh()
         Pd = Pdiv(mesh)

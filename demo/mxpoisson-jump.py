@@ -27,8 +27,9 @@ from block.algebraic.petsc import *
 import os
 
 
-N = 48 
-mesh = UnitSquareMesh(N, N) 
+N = 48
+parameters['ghost_mode'] = 'shared_facet'
+mesh = UnitSquareMesh(N, N)
 # Define function spaces
 V = FunctionSpace(mesh, "BDM", 1)
 Q = FunctionSpace(mesh, "DG", 0)

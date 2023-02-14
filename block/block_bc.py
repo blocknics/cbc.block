@@ -2,6 +2,7 @@ import dolfin
 from .block_mat import block_mat
 from .block_vec import block_vec
 from .block_util import wrap_in_list, create_diagonal_matrix
+from .helpers import supports_mpi
 from .splitting import split_bcs
 import itertools
 import numpy
@@ -51,6 +52,7 @@ class block_bc:
         self.signs = signs or [1]*len(self.bcs)
         if not all(s in [-1,1] for s in self.signs):
             raise ValueError('signs should be a list of length n containing only 1 or -1')
+        supports_mpi(not symmetric, 'Symmetric BCs not supported in parallel')
 
     @classmethod
     def from_mixed(cls, bcs, *args, **kwargs):
