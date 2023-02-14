@@ -16,18 +16,30 @@
 set -e
 
 PARALLEL=-P4
-if [[ $1 == "--coverage" ]]; then
-    export BLOCK_REGRESSION_COVERAGE=1
-    shift
-elif [[ $1 == "--mpirun" ]]; then
-    export BLOCK_REGRESSION_MPIRUN=1
-    PARALLEL=
-    shift
-fi
+while true; do
+    case "$1" in
+        --coverage)
+            export BLOCK_REGRESSION_COVERAGE=1
+            shift
+            ;;
+        --mpirun)
+            export BLOCK_REGRESSION_MPIRUN=1
+            PARALLEL=
+            shift
+            ;;
+        --*)
+            echo "Unknown option: $1" >&2
+            exit 255
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 if (( $# )); then
     if (( $# != 1 )); then
-        echo "Expected a single argument (the script)"
+        echo "Expected a single argument (the script)" >&2
         exit 255
     fi
     if [[ -n $BLOCK_REGRESSION_COVERAGE ]] && grep -q '^[^#]*check_expected(' "$1"; then
