@@ -84,7 +84,7 @@ def boundary(x):
 # Define the blockwise boundary conditions -- a Dirichlet condition on the
 # first block, and no conditions on the second block.
 bcs_BDM = [DirichletBC(BDM, G, boundary)]
-bcs = block_bc([bcs_BDM, None], True)
+bcs = block_bc([bcs_BDM, None], symmetric=True)
 
 # Define source function
 f = Expression("10*exp(-(pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 0.02)", degree=4)

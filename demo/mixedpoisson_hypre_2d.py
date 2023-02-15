@@ -107,8 +107,8 @@ Sigma, U = AAinv * bb
 #=====================
 
 # Print norms that can be compared with those reported by demo-parallelmixedpoisson
-print(('norm Sigma:', Sigma.norm('l2')))
-print(('norm U    :', U.norm('l2')))
+check_expected('norm Sigma', Sigma, show=True)
+check_expected('norm U    ', U,     show=True)
 
 # Plot sigma and u
 if MPI.size(mesh.mpi_comm()) == 1 and not 'DOLFIN_NOPLOT' in os.environ:

@@ -1,3 +1,4 @@
+from block.algebraic import petsc # NOTE: Not used, import initializes petsc from cmdline
 from block.block_base import block_base
 from block import block_mat, supports_mpi
 from builtins import str

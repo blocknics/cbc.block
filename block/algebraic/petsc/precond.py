@@ -7,14 +7,14 @@ from block.object_pool import vec_pool
 from petsc4py import PETSc
 import dolfin as df
 import numpy as np
+import hashlib
 from time import time
 from dolfin import info
 
 
 class precond(block_base):
-    def __init__(self, A, prectype, parameters=None, pdes=1, nullspace=None):
-
-        Ad = A.down_cast().mat()
+    def __init__(self, A, prectype, pdes, nullspace, prefix, options, V=None, create_cb=None, defaults={}):
+        Ad = mat(A)
 
         if nullspace:
             from block.block_util import isscalar
@@ -28,21 +28,38 @@ class precond(block_base):
             except:
                 info('failed to set near null space (not supported in petsc4py version)')
 
+        # The PETSc options database is global, so we create a unique prefix
+        # that precisely matches the supplied options. The user can override
+        # this prefix if necessary.
+        if prefix is None:
+            # Use class name instead of hash of defaults (we assume defaults
+            # are constant for a given class)
+            prefix = self.__class__.__name__
+            if options:
+                sha = hashlib.sha256(str(tuple(sorted(options.items()))).encode())
+                prefix += sha.hexdigest()[:8]
+            prefix += ':'
+
+        self.optsDB = PETSc.Options(prefix)
+        params = defaults.copy()
+        if options:
+            params.update(options)
+        for key, val in params.items():
+            # Allow overriding defaults by setting key='del'. Command-line
+            # options (already in optsDB) are never overwritten.
+            if val!='del' and not self.optsDB.hasName(key):
+                self.optsDB.setValue(key, val)
+
+        if prectype == PETSc.PC.Type.HYPRE and nullspace:
+            if not all(self.optsDB.hasName(n) for n in ['pc_hypre_boomeramg_nodal_coarsen', 'pc_hypre_boomeramg_vec_interp_variant']):
+                print('Near null space is ignored by hypre UNLESS you also supply pc_hypre_boomeramg_nodal_coarsen and pc_hypre_boomeramg_vec_interp_variant')
+
         self.A = A
-        self.petsc_prec = PETSc.PC()
-        self.petsc_prec.create()
+        self.petsc_prec = PETSc.PC().create(V.mesh().mpi_comm() if V else None)
+        self.petsc_prec.setOptionsPrefix(prefix)
         self.petsc_prec.setType(prectype)
-#        self.petsc_prec.setOperators(Ad, Ad, PETSc.Mat.Structure.SAME_PRECONDITIONER)
-        self.petsc_prec.setOperators(Ad, Ad) 
-
-        # Set PETSc
-        optsDB = PETSc.Options()
-        keys = optsDB.getAll().keys()
-
-        if parameters is not None:
-            for key, val in parameters.items():
-                # cmd line value takes priority
-                key not in keys and optsDB.setValue(key, val)
+        self.petsc_prec.setOperators(Ad)
+        self.petsc_prec.setFromOptions()
 
         self.setup_time = -1.
 
@@ -51,7 +68,6 @@ class precond(block_base):
         if self.setup_time < 0:
             T = time()
             # Create preconditioner based on the options database
-            self.petsc_prec.setFromOptions()
             self.petsc_prec.setUp()
 
             setup_time = time()-T
@@ -82,173 +98,150 @@ class precond(block_base):
     def create_vec(self, dim=1):
         return self.A.create_vec(dim)
 
-    
-class ML(precond):
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-        options = {
-            # Symmetry- and PD-preserving smoother
-            'mg_levels_ksp_type': 'chebyshev',
-            'mg_levels_pc_type':  'jacobi',
-            # Fixed number of iterations to preserve linearity
-            'mg_levels_ksp_max_it':               2,
-            'mg_levels_ksp_check_norm_iteration': 9999,
-            # Exact inverse on coarse grid
-            'mg_coarse_ksp_type': 'preonly',
-            'mg_coarse_pc_type':  'lu',
-            }
 
-        parameters is not None and options.update(parameters)
-        
-        precond.__init__(self, A, PETSc.PC.Type.ML, options, pdes, nullspace)
+class ML(precond):
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        super().__init__(A, PETSc.PC.Type.ML, parameters, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             # Symmetry- and PD-preserving smoother
+                             'mg_levels_ksp_type': 'chebyshev',
+                             'mg_levels_pc_type':  'jacobi',
+                             # Fixed number of iterations to preserve linearity
+                             'mg_levels_ksp_max_it':               2,
+                             'mg_levels_ksp_check_norm_iteration': 9999,
+                             # Exact inverse on coarse grid
+                             'mg_coarse_ksp_type': 'preonly',
+                             'mg_coarse_pc_type':  'lu',
+                         })
 
 class ILU(precond):
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-        supports_mpi(False)
-        precond.__init__(self, A, PETSc.PC.Type.ILU, parameters, pdes, nullspace)
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        supports_mpi(False, 'PETSc ILU does not work in parallel', mat(A).comm.size)
+        super().__init__(A, PETSc.PC.Type.ILU, pdes, nullspace, options=parameters, prefix=prefix)
 
 class Cholesky(precond):
     def __init__(self, A, parameters=None):
-        precond.__init__(self, A, PETSc.PC.Type.CHOLESKY, parameters, 1, None)
+        super().__init__(A, PETSc.PC.Type.CHOLESKY, 1, None, options=parameters, prefix=prefix)
 
 class LU(precond):
     def __init__(self, A, parameters=None):
-        parameters = {} if parameters is None else parameters
-        precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
+        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix)
 
 
 class MUMPS_LU(LU):
     def __init__(self, A, parameters=None):
-        options = parameters.copy() if parameters else {}
-        options['pc_factor_mat_solver_package'] = 'mumps'
-        precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
+        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
+                         defaults={
+                             'pc_factor_mat_solver_package': 'mumps',
+                         })
 
 
 class SUPERLU_LU(LU):
     def __init__(self, A, parameters=None):
-        options = parameters.copy() if parameters else {}
-        options['pc_factor_mat_solver_package'] = 'superlu'
-        precond.__init__(self, A, PETSc.PC.Type.LU, parameters, 1, None)
+        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
+                         defaults={
+                             'pc_factor_mat_solver_package': 'superlu',
+                         })
         self.petsc_prec.setFactorPivot(1E-16)
 
-        
 class AMG(precond):
     """
     BoomerAMG preconditioner from the Hypre Library
     """
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-        
-        options = {
-            "pc_hypre_type": "boomeramg",
-            #"pc_hypre_boomeramg_cycle_type": "V", # (V,W)
-            #"pc_hypre_boomeramg_max_levels": 25,
-            #"pc_hypre_boomeramg_max_iter": 1,
-            #"pc_hypre_boomeramg_tol": 0,     
-            #"pc_hypre_boomeramg_truncfactor" : 0,      # Truncation factor for interpolation
-            #"pc_hypre_boomeramg_P_max": 0,             # Max elements per row for interpolation
-            #"pc_hypre_boomeramg_agg_nl": 0,            # Number of levels of aggressive coarsening
-            #"pc_hypre_boomeramg_agg_num_paths": 1,     # Number of paths for aggressive coarsening
-            #"pc_hypre_boomeramg_strong_threshold": .25,# Threshold for being strongly connected
-            #"pc_hypre_boomeramg_max_row_sum": 0.9,
-            #"pc_hypre_boomeramg_grid_sweeps_all": 1,   # Number of sweeps for the up and down grid levels 
-            #"pc_hypre_boomeramg_grid_sweeps_down": 1,  
-            #"pc_hypre_boomeramg_grid_sweeps_up":1,
-            #"pc_hypre_boomeramg_grid_sweeps_coarse": 1,# Number of sweeps for the coarse level (None)
-            #"pc_hypre_boomeramg_relax_type_all":  "symmetric-SOR/Jacobi", # (Jacobi, sequential-Gauss-Seidel, seqboundary-Gauss-Seidel, 
-                                                                          #  SOR/Jacobi, backward-SOR/Jacobi,  symmetric-SOR/Jacobi,  
-                                                                          #  l1scaled-SOR/Jacobi Gaussian-elimination, CG, Chebyshev, 
-                                                                          #  FCF-Jacobi, l1scaled-Jacobi)
-            #"pc_hypre_boomeramg_relax_type_down": "symmetric-SOR/Jacobi",
-            #"pc_hypre_boomeramg_relax_type_up": "symmetric-SOR/Jacobi",
-            #"pc_hypre_boomeramg_relax_type_coarse": "Gaussian-elimination",
-            #"pc_hypre_boomeramg_relax_weight_all": 1,   # Relaxation weight for all levels (0 = hypre estimates, -k = determined with k CG steps)
-            #"pc_hypre_boomeramg_relax_weight_level": (1,1), # Set the relaxation weight for a particular level
-            #"pc_hypre_boomeramg_outer_relax_weight_all": 1,
-            #"pc_hypre_boomeramg_outer_relax_weight_level": (1,1),
-            #"pc_hypre_boomeramg_no_CF": "",               # Do not use CF-relaxation 
-            #"pc_hypre_boomeramg_measure_type": "local",   # (local global)
-            #"pc_hypre_boomeramg_coarsen_type": "Falgout", # (Ruge-Stueben, modifiedRuge-Stueben, Falgout, PMIS, HMIS)
-            #"pc_hypre_boomeramg_interp_type": "classical",# (classical, direct, multipass, multipass-wts, ext+i, ext+i-cc, standard, standard-wts, FF, FF1)
-            #"pc_hypre_boomeramg_print_statistics": "",
-            #"pc_hypre_boomeramg_print_debug": "",
-            #"pc_hypre_boomeramg_nodal_coarsen": "",
-            #"pc_hypre_boomeramg_nodal_relaxation": "",
-            }
-        # Overwrite our default by what user passed as args
-        parameters is not None and options.update(parameters)
-        
-        precond.__init__(self, A, PETSc.PC.Type.HYPRE, options, pdes, nullspace)
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        super().__init__(A, PETSc.PC.Type.HYPRE, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             "pc_hypre_type": "boomeramg",
+                             #"pc_hypre_boomeramg_cycle_type": "V", # (V,W)
+                             #"pc_hypre_boomeramg_max_levels": 25,
+                             #"pc_hypre_boomeramg_max_iter": 1,
+                             #"pc_hypre_boomeramg_tol": 0,     
+                             #"pc_hypre_boomeramg_truncfactor" : 0,      # Truncation factor for interpolation
+                             #"pc_hypre_boomeramg_P_max": 0,             # Max elements per row for interpolation
+                             #"pc_hypre_boomeramg_agg_nl": 0,            # Number of levels of aggressive coarsening
+                             #"pc_hypre_boomeramg_agg_num_paths": 1,     # Number of paths for aggressive coarsening
+                             #"pc_hypre_boomeramg_strong_threshold": .25,# Threshold for being strongly connected
+                             #"pc_hypre_boomeramg_max_row_sum": 0.9,
+                             #"pc_hypre_boomeramg_grid_sweeps_all": 1,   # Number of sweeps for the up and down grid levels 
+                             #"pc_hypre_boomeramg_grid_sweeps_down": 1,  
+                             #"pc_hypre_boomeramg_grid_sweeps_up":1,
+                             #"pc_hypre_boomeramg_grid_sweeps_coarse": 1,# Number of sweeps for the coarse level (None)
+                             #"pc_hypre_boomeramg_relax_type_all":  "symmetric-SOR/Jacobi", # (Jacobi, sequential-Gauss-Seidel, seqboundary-Gauss-Seidel, 
+                                                                                            #  SOR/Jacobi, backward-SOR/Jacobi,  symmetric-SOR/Jacobi,  
+                                                                                            #  l1scaled-SOR/Jacobi Gaussian-elimination, CG, Chebyshev, 
+                                                                                            #  FCF-Jacobi, l1scaled-Jacobi)
+                             #"pc_hypre_boomeramg_relax_type_down": "symmetric-SOR/Jacobi",
+                             #"pc_hypre_boomeramg_relax_type_up": "symmetric-SOR/Jacobi",
+                             #"pc_hypre_boomeramg_relax_type_coarse": "Gaussian-elimination",
+                             #"pc_hypre_boomeramg_relax_weight_all": 1,   # Relaxation weight for all levels (0 = hypre estimates, -k = determined with k CG steps)
+                             #"pc_hypre_boomeramg_relax_weight_level": (1,1), # Set the relaxation weight for a particular level
+                             #"pc_hypre_boomeramg_outer_relax_weight_all": 1,
+                             #"pc_hypre_boomeramg_outer_relax_weight_level": (1,1),
+                             #"pc_hypre_boomeramg_no_CF": "",               # Do not use CF-relaxation 
+                             #"pc_hypre_boomeramg_measure_type": "local",   # (local global)
+                             #"pc_hypre_boomeramg_coarsen_type": "Falgout", # (Ruge-Stueben, modifiedRuge-Stueben, Falgout, PMIS, HMIS)
+                             #"pc_hypre_boomeramg_interp_type": "classical",# (classical, direct, multipass, multipass-wts, ext+i, ext+i-cc, standard, standard-wts, FF, FF1)
+                             #"pc_hypre_boomeramg_print_statistics": "",
+                             #"pc_hypre_boomeramg_print_debug": "",
+                             #"pc_hypre_boomeramg_nodal_coarsen": "",
+                             #"pc_hypre_boomeramg_nodal_relaxation": "",
+                         })
 
 
 class SOR(precond):
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
         options = {
-            "pc_sor_omega": 1,      # relaxation factor (0 < omega < 2, 1 is Gauss-Seidel)
-            "pc_sor_its": 1,        # number of inner SOR iterations
-            "pc_sor_lits": 1,       # number of local inner SOR iterations
-            "pc_sor_symmetric": "", # for SSOR
-            #"pc_sor_backward": "",
-            #"pc_sor_forward": "",  
-            #"tmp_pc_sor_local_symmetric": "", # use SSOR separately on each processor
-            #"tmp_pc_sor_local_backward": "",  
-            #"tmp_pc_sor_local_forward": "",
             }
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
-        supports_mpi(not 'pc_sor_symmetric' in options, 'PETSc symmetric SOR not supported in parallel')
-        precond.__init__(self, A, PETSc.PC.Type.SOR, options, pdes, nullspace)
+        super().__init__(A, PETSc.PC.Type.SOR, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             "pc_sor_omega": 1,      # relaxation factor (0 < omega < 2, 1 is Gauss-Seidel)
+                             "pc_sor_its": 1,        # number of inner SOR iterations
+                             "pc_sor_lits": 1,       # number of local inner SOR iterations
+                             "pc_sor_symmetric": "", # for SSOR
+                             #"pc_sor_backward": "",
+                             #"pc_sor_forward": "",  
+                             #"tmp_pc_sor_local_symmetric": "", # use SSOR separately on each processor
+                             #"tmp_pc_sor_local_backward": "",  
+                             #"tmp_pc_sor_local_forward": "",
+                         })
+        supports_mpi(not self.optsDB.hasName('pc_sor_symmetric'), 'PETSc symmetric SOR not supported in parallel', mat(A).comm.size)
 
 
 class Elasticity(precond):
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-
-        prefix = str(time())
-        A.down_cast().mat().setOptionsPrefix(prefix)
-        
-        options = {
-            'pc_mg_cycle_type': 'w',
-            'pc_mg_multiplicative_cycles': 2
-            }
-        options = {'_'.join([prefix, key]): val for key, val in options.items()}
-        print(options)
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
-        precond.__init__(self, A, PETSc.PC.Type.GAMG, options, pdes, nullspace)
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        super().__init__(A, PETSc.PC.Type.GAMG, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             'pc_mg_cycle_type': 'w',
+                             'pc_mg_multiplicative_cycles': 2
+                         })
 
 class ASM(precond):
     """
     Additive Scwharz Method.
     Defaults (or should default, not tested) to one block per process.
     """
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-        options = {
-            #"pc_asm_blocks":  1,             # Number of subdomains
-            "pc_asm_overlap": 1,             # Number of grid points overlap
-            "pc_asm_type":  "RESTRICT",      # (NONE, RESTRICT, INTERPOLATE, BASIC)
-            "sup_ksp_type": "preonly",       # KSP solver for the subproblems
-            "sub_pc_type": "ilu"             # Preconditioner for the subproblems
-            }
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
-        precond.__init__(self, A, PETSc.PC.Type.ASM, options, pdes, nullspace)
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        super().__init__(A, PETSc.PC.Type.ASM, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             #"pc_asm_blocks":  1,             # Number of subdomains
+                             "pc_asm_overlap": 1,             # Number of grid points overlap
+                             "pc_asm_type":  "RESTRICT",      # (NONE, RESTRICT, INTERPOLATE, BASIC)
+                             "sup_ksp_type": "preonly",       # KSP solver for the subproblems
+                             "sub_pc_type": "ilu"             # Preconditioner for the subproblems
+                         })
 
 
 class Jacobi(precond):
     """
     Actually this is only a diagonal scaling preconditioner; no support for relaxation or multiple iterations.
     """
-    def __init__(self, A, parameters=None, pdes=1, nullspace=None):
-        options = {
-            #"pc_jacobi_rowmax": "",  # Use row maximums for diagonal
-            #"pc_jacobi_rowsum": "",  # Use row sums for diagonal
-            #"pc_jacobi_abs":, "",    # Use absolute values of diagaonal entries
-            }
-        options.update(PETSc.Options().getAll())
-        if parameters:
-            options.update(parameters)
-        precond.__init__(self, A, PETSc.PC.Type.JACOBI, options, pdes, nullspace)
+    def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
+        super().__init__(A, PETSc.PC.Type.JACOBI, pdes, nullspace, options=parameters, prefix=prefix,
+                         defaults={
+                             #"pc_jacobi_rowmax": "",  # Use row maximums for diagonal
+                             #"pc_jacobi_rowsum": "",  # Use row sums for diagonal
+                             #"pc_jacobi_abs":, "",    # Use absolute values of diagaonal entries
+                         })
 
 
 def vec(x):
@@ -259,7 +252,7 @@ def mat(A):
     return df.as_backend_type(A).mat()
 
 
-class HypreAMS(block_base):
+class HypreAMS(precond):
     '''
     AMG auxiliary space preconditioner for H(curl) problems in 2d/3d and
     H(div) problems in 2d. The bilinear form behind the matrix whose 
@@ -277,53 +270,27 @@ class HypreAMS(block_base):
             assert V.ufl_element().family() == 'Nedelec 1st kind H(curl)'
         # FIXME: only tested this for lower orders
         assert V.ufl_element().degree() == 1
-            
+
         # AMS setup requires auxiliary operators
         Q = df.FunctionSpace(mesh, 'CG', 1)
         G = df.DiscreteOperators.build_gradient(V, Q)
 
-        pc = PETSc.PC().create(mesh.mpi_comm())
-        pc.setType('hypre')
-        pc.setHYPREType('ams')
-
-        pc.setHYPREDiscreteGradient(mat(G))
+        super().__init__(A, PETSc.PC.Type.HYPRE, V=V, pdes=None, nullspace=None, options=None, prefix=None,
+                         defaults={
+                             'pc_hypre_type': 'ams',
+                         })
+        self.petsc_prec.setHYPREDiscreteGradient(mat(G))
 
         # Constants
         constants = [vec(df.interpolate(df.Constant(c), V).vector())
                      for c in np.eye(mesh.geometry().dim())]
-
-        pc.setHYPRESetEdgeConstantVectors(*constants)
+        self.petsc_prec.setHYPRESetEdgeConstantVectors(*constants)
 
         # NOTE: signal that we don't have lower order term
-        ams_zero_beta_poisson and pc.setHYPRESetBetaPoissonMatrix(None)
-
-        pc.setOperators(mat(A))
-
-        pc.setFromOptions()
-        pc.setUp()
-
-        self.pc = pc
-        self.A = A   # For creating vec
-
-    def matvec(self, b):
-        if not isinstance(b, df.GenericVector):
-            return NotImplemented
-        x = self.A.create_vec(dim=1)
-
-        if x.size() != b.size():
-            raise RuntimeError(
-                'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
-
-        self.pc.apply(vec(b), vec(x))
-
-        return x
-
-    @vec_pool
-    def create_vec(self, dim=1):
-        return self.A.create_vec(dim)
+        ams_zero_beta_poisson and self.petsc_prec.setHYPRESetBetaPoissonMatrix(None)
 
 
-class HypreADS(block_base):
+class HypreADS(precond):
     '''
     AMG auxiliary space preconditioner for H(div) problems in 3d. The bilinear 
     form behind the matrix whose approximate inverse is constructed is: Find u in V
@@ -381,7 +348,6 @@ class HypreADS(block_base):
             Cmat.setValues([row], row_cols, row_values, PETSc.InsertMode.INSERT_VALUES)
         Cmat.assemble()
 
-        
         return Cmat
 
     def __init__(self, A, V):
@@ -389,42 +355,18 @@ class HypreADS(block_base):
         assert V.ufl_element().family() == 'Raviart-Thomas'
         assert V.ufl_element().degree() == 1
 
+        supports_mpi(False, 'ADS curl matrix needs to be fixed for parallel', mat(A).comm.size) # FIXME
+
         mesh = V.mesh()
-        # FIXME: curl matrix needs to be fixed for parallel        
-        assert mesh.mpi_comm().size == 1  
-        
         C = HypreADS.discrete_curl(mesh)
         G = HypreADS.discrete_gradient(mesh)
         xyz = HypreADS.coordinates(mesh)
 
-        pc = PETSc.PC().create(mesh.mpi_comm())
-        pc.setOperators(mat(A))
-                    
-        pc.setType('hypre')
-        pc.setHYPREType('ads')
+        super().__init__(A, PETSc.PC.Type.HYPRE, V=V, pdes=None, nullspace=None, options=None, prefix=None,
+                         defaults={
+                             'pc_hypre_type': 'ads',
+                         })
         # Attach auxiliary operators
-        pc.setHYPREDiscreteGradient(G)
-        pc.setHYPREDiscreteCurl(G)
-        pc.setCoordinates(xyz)
-        pc.setUp()
-    
-        self.pc = pc
-        self.A = A   # For creating vec
- 
-    def matvec(self, b):
-        if not isinstance(b, df.GenericVector):
-            return NotImplemented
-        x = self.A.create_vec(dim=1)
-
-        if x.size() != b.size():
-            raise RuntimeError(
-                'incompatible dimensions for PETSc matvec, %d != %d'%(len(x),len(b)))
-        b_, x_ = mat(self.A).createVecs()
-        
-        self.pc.apply(vec(b), vec(x))
-
-        return x
-
-    @vec_pool
-    def create_vec(self, dim=1):
-        return self.A.create_vec(dim)
+        self.petsc_prec.setHYPREDiscreteGradient(G)
+        self.petsc_prec.setHYPREDiscreteCurl(G)
+        self.petsc_prec.setCoordinates(xyz)
