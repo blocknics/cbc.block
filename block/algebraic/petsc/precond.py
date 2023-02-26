@@ -133,15 +133,16 @@ class Cholesky(precond):
                          pdes=1, nullspace=None, options=parameters, prefix=prefix)
 
 class LU(precond):
-    def __init__(self, A, parameters=None, prefix=None):
+    def __init__(self, A, parameters=None, prefix=None, defaults={}):
         super().__init__(A, PETSc.PC.Type.LU,
-                         pdes=1, nullspace=None, options=parameters, prefix=prefix)
+                         pdes=1, nullspace=None, options=parameters, prefix=prefix,
+                         defaults=defaults)
 
 
 class MUMPS_LU(LU):
     def __init__(self, A, parameters=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.LU,
-                         pdes=1, nullspace=None, options=parameters, prefix=prefix,
+        super().__init__(A,
+                         parameters=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'mumps',
                          })
@@ -149,8 +150,8 @@ class MUMPS_LU(LU):
 
 class SUPERLU_LU(LU):
     def __init__(self, A, parameters=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.LU,
-                         pdes=1, nullspace=None, options=parameters, prefix=prefix,
+        super().__init__(A,
+                         parameters=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'superlu',
                          })

@@ -1,8 +1,10 @@
+import itertools
 import pytest
 from inspect import signature
 from block.algebraic.petsc import *
 
-@pytest.mark.parametrize('prec_class', precond.__subclasses__())
+@pytest.mark.parametrize('prec_class',
+                         itertools.chain(precond.__subclasses__(), LU.__subclasses__()))
 def test_construct(prec_class, poisson):
     if prec_class in [ML, HypreAMS, HypreADS]:
         # ML requires Trilinos
