@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import dolfin as df
 import pytest
 
@@ -14,4 +15,7 @@ def poisson():
     A = df.assemble(a)
     b = df.assemble(L)
 
-    return A,b
+    u = df.Function(V)
+    df.solve(A, u.vector(), b)
+
+    return SimpleNamespace(A=A, b=b, V=V, x=u.vector())
