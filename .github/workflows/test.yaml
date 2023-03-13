@@ -31,13 +31,13 @@ jobs:
           # fenics-dolfin on conda-forge starts at 3.8
           python-version: "3.8.*"
 
-      - name: Set environment
+      - name: Install cbc-block
         run: |
-          echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
-          pip install coverage
+          python3 -m pip install .
 
       - name: Run tests
         run: |
+          python3 -m pip install coverage
           coverage run --parallel-mode --branch -m pytest -v test
 
       - name: Run regression tests
