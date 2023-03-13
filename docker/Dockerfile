@@ -17,6 +17,8 @@ RUN git clone --branch=${PYAMG_VERSION} --single-branch --depth=1 https://github
     python3 -m pip install pyamg
 
 # Haznics
+RUN apt-get update && apt-get install -y swig && apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/tmp/*
 RUN git clone --branch=${HAZMATH_VERSION} --single-branch --depth=1 https://github.com/HAZmathTeam/hazmath && \
     cd hazmath && \ 
     make config shared=yes suitesparse=yes lapack=yes haznics=yes swig=yes . && \
