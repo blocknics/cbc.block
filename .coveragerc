@@ -1,9 +1,0 @@
-[run]
-parallel = true
-source = block
-
-[html]
-directory= htmlcov
-
-[xml]
-output = coverage.xml

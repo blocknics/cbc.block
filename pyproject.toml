@@ -27,7 +27,7 @@ test = [
    "mypy", # Input/Output consistency
    "pytest", # Testing suite
    "pytest-cov", # Coverage reports
-   "coverage",
+   "coverage[toml]",
 ]
 
 docs = [
@@ -48,7 +48,7 @@ pypi = [
     "build" # Used for building wheels and uploading to pypi
 ]
 
-all = ["block[test,docs,pypi,haznics,pytrilinos]"]
+all = ["block[test,docs,pypi,haznics,trilinos]"]
 
 [tool.mypy]
 ignore_missing_imports = true # Does not show errors when importing untyped libraries
@@ -73,3 +73,13 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 "block.data.regression" = ["*.pickle"]
+
+[tool.coverage.run]
+parallel = true
+source = ["block"]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
