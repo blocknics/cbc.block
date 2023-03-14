@@ -50,14 +50,14 @@ jobs:
       - name: Coverage report
         run: |
           coverage combine
-          coverage report -m --include "block/*"
-          coverage html --include "block/*" --quiet
-          coverage xml --include "block/*" --quiet
+          coverage report -m
+          coverage html --quiet
+          coverage xml --quiet
 
       - name: Coverage PR comment
         uses: 5monkeys/cobertura-action@master
         with:
-          #path: src/test.xml
+          #path: coverage.xml
           #minimum_coverage: 75
           skip_covered: false
           minimum_coverage: 50
