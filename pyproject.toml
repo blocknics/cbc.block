@@ -6,9 +6,7 @@ build_backend = "setuptools.build_meta"
 [project]
  # Name of your package
 name = "block"
-authors = [
-    {name = "Joachim Berdal Haga", email = "jobh@simula.no"}
-    ]
+authors = [{name = "Joachim Berdal Haga", email = "jobh@simula.no"}]
 version = "3.0.0"
 description = "Block algebra for Fenics/DOLFIN"
 # "readme" the description field in your package, see: https://python-poetry.org/docs/pyproject/#readme
@@ -23,14 +21,13 @@ dependencies = [
   "matplotlib"
 ]
 
-
 [project.optional-dependencies]
 test = [
    "flake8", # Formatting: https://flake8.pycqa.org/en/latest/user/error-codes.html
    "mypy", # Input/Output consistency
    "pytest", # Testing suite
    "pytest-cov", # Coverage reports
-   "coverage"
+   "coverage",
 ]
 
 docs = [
