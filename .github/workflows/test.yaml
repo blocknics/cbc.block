@@ -31,13 +31,12 @@ jobs:
           # fenics-dolfin on conda-forge starts at 3.8
           python-version: "3.8.*"
 
-      - name: Set environment
-        run: |
-          echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
-          pip install coverage
+      - name: Install cbc-block
+        run:
+          python3 -m pip install .[test]
 
       - name: Run tests
-        run: |
+        run:
           coverage run --parallel-mode --branch -m pytest -v test
 
       - name: Run regression tests
@@ -51,14 +50,14 @@ jobs:
       - name: Coverage report
         run: |
           coverage combine
-          coverage report -m --include "block/*"
-          coverage html --include "block/*" --quiet
-          coverage xml --include "block/*" --quiet
+          coverage report -m
+          coverage html --quiet
+          coverage xml --quiet
 
       - name: Coverage PR comment
         uses: 5monkeys/cobertura-action@master
         with:
-          #path: src/test.xml
+          #path: coverage.xml
           #minimum_coverage: 75
           skip_covered: false
           minimum_coverage: 50

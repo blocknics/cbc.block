@@ -1,0 +1,85 @@
+[build-system] # Require setuptool version due to https://github.com/pypa/setuptools/issues/2938
+requires = ["setuptools>=61.0.0", "wheel"]
+build_backend = "setuptools.build_meta"
+
+ # See https://python-poetry.org/docs/pyproject/ for more keywords for the project table
+[project]
+ # Name of your package
+name = "block"
+authors = [{name = "Joachim Berdal Haga", email = "jobh@simula.no"}]
+version = "3.0.0"
+description = "Block algebra for Fenics/DOLFIN"
+# "readme" the description field in your package, see: https://python-poetry.org/docs/pyproject/#readme
+readme = "README.md"
+requires-python = ">=3.8"
+ # Path to license file, see: https://spdx.org/licenses/ for options
+license = {file = "COPYING"}
+# Direct dependencies
+dependencies = [
+  "fenics-dolfin>=2017.1",
+  "scipy",
+  "matplotlib"
+]
+
+[project.optional-dependencies]
+test = [
+   "flake8", # Formatting: https://flake8.pycqa.org/en/latest/user/error-codes.html
+   "mypy", # Input/Output consistency
+   "pytest", # Testing suite
+   "pytest-cov", # Coverage reports
+   "coverage[toml]",
+]
+
+docs = [
+    "jupyter-book", # Required to build documentation
+    "jupytext", # Required to convert .py to .ipynb files
+    "ipython"
+]
+
+haznics = [
+    "haznics",
+]
+
+trilinos = [
+    "pytrilinos",
+]
+
+pypi = [
+    "build" # Used for building wheels and uploading to pypi
+]
+
+all = ["block[test,docs,pypi,haznics,trilinos]"]
+
+[tool.mypy]
+ignore_missing_imports = true # Does not show errors when importing untyped libraries
+exclude = [ # We only want mypy to consider files that are not generated in installing or building documentation
+    "docs/",
+    "build/"
+]
+files = [  # Folder to which files that should be checked by mypy
+    "block",
+    "test"
+]
+
+testpaths = [
+    "test"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"block.data.regression" = ["*.pickle"]
+
+[tool.coverage.run]
+parallel = true
+source = ["block"]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"

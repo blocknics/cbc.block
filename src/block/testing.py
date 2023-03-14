@@ -1,19 +1,25 @@
-from dolfin import MPI
-from urllib.parse import quote_plus
 import atexit
 import inspect
-import numpy as np
 import os
 import pathlib
 import pickle
+from urllib.parse import quote_plus
+
+import numpy as np
+from dolfin import MPI
+
 
 class RegressionFailure(Exception):
     pass
 
+
 def _regr_root():
-    return pathlib.Path(__file__).parent.parent / 'data/regression'
+    return pathlib.Path(__file__).parent.absolute() / 'data/regression'
+
 
 _errs = 0
+
+
 def _log_or_raise(msg):
     if os.environ.get('BLOCK_REGRESSION_ABORT'):
         raise RegressionFailure(msg)
@@ -25,12 +31,15 @@ def _log_or_raise(msg):
             @atexit.register
             def print_msg():
                 print(f'! {_errs} expected test(s) failed')
-                print(f'  Remove file(s) in {_regr_root()}/ and re-run to store new values as reference')
+                print(
+                    f'  Remove file(s) in {_regr_root()}/ and re-run to store new values as reference')
+
 
 def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expected=None):
     itol += 1
     if prefix is None:
         prefix = pathlib.Path(inspect.stack()[1].filename).stem
+
     def _decimate(v):
         # Pickle not supported for block_vec/dolfin_vec, convert to numpy
         if hasattr(v, 'get_local'):
@@ -45,6 +54,7 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
         v_mean = np.add.reduceat(v, chunks) / divisor
         v_rms = np.sqrt(np.add.reduceat(v**2, chunks) / divisor)
         return (v_mean + v_rms) / 2
+
     def _l2(v):
         if np.isscalar(v):
             return v
@@ -83,17 +93,20 @@ def check_expected(name, vec, show=False, rtol=1e-6, itol=0.1, prefix=None, expe
             if show:
                 print(f'Norm of {name}: {cur_norm:.4f}, error: {err_norm:.4g}')
             if rdiff > rtol:
-                _log_or_raise(f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > rtol {rtol:.3g}) ({prefix})')
+                _log_or_raise(
+                    f'Error in {name}: {err_norm:.4g} ({rdiff:.3g} > rtol {rtol:.3g}) ({prefix})')
     else:
         if show:
             print(f'Norm of {name}: {cur_norm:.4f}')
         if ref_norm is not None:
             rdiff = abs(cur_norm - ref_norm) / max(ref_norm, len(cur_vec))
             if rdiff > rtol:
-                _log_or_raise(f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > rtol {rtol:.3g})')
+                _log_or_raise(
+                    f'Norm of {name} {cur_norm:.6g} != {ref_norm:.6g} ({rdiff:.3g} > rtol {rtol:.3g})')
     if is_serial and ref_iter is not None:
         if cur_iter is None or not ref_iter/itol <= cur_iter <= ref_iter*itol:
-            _log_or_raise(f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations ({prefix})')
+            _log_or_raise(
+                f'Solver for {name} used {cur_iter} != ({ref_iter}/{itol}--{ref_iter}*{itol}) iterations ({prefix})')
 
     if not fname.exists():
         if is_serial:

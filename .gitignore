@@ -11,3 +11,7 @@
 /build
 cbc.block.egg-info/
 
+.coverage.*
+.coverage
+*.egg-info
+coverage.xml
