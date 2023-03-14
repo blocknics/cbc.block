@@ -27,4 +27,5 @@ RUN git clone --branch=${HAZMATH_VERSION} --single-branch --depth=1 https://gith
 ENV PYTHONPATH /tmp/hazmath/swig_files:${PYTHONPATH}
 
 # cbc.block
+COPY . /tmp/cbc.block/
 RUN python3 -m pip install cbc.block/[all]

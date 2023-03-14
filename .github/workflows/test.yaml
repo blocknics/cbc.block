@@ -32,12 +32,11 @@ jobs:
           python-version: "3.8.*"
 
       - name: Install cbc-block
-        run: |
-          python3 -m pip install .
+        run:
+          python3 -m pip install .[test]
 
       - name: Run tests
-        run: |
-          python3 -m pip install coverage
+        run:
           coverage run --parallel-mode --branch -m pytest -v test
 
       - name: Run regression tests
