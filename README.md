@@ -1,40 +1,42 @@
+# CBC-block
+
 *cbc.block* is a python library for block operations in DOLFIN
 (http://fenicsproject.org). The headline features are:
 
 - Block operators may be defined from standard DOLFIN matrices and vectors:
 
-    ```
+    ```python
     A = assemble(...); B = assemble(...); # etc
     AA = block_mat([[A,B], [C,D]])
     ```
 
 - Preconditioners, inverses, and inner solvers are supported:
 
-    ```
+    ```python
     AAprec = AA.scheme('gauss-seidel', inverse=ML)
     ```
 
 - A good selection of iterative solvers:
 
-    ```
+    ```python
     AAinv = SymmLQ(AA, precond=AAprec)
     x = AAinv*b
     ```
 
 - Matrix algebra is supported both through composition of operators... :
 
-    ```
+    ```python
     S = C*ILU(A)*B-D
     Sprec = ConjGrad(S)
     ```
     ...and through explicit matrix calculation via PyTrilinos:
   
-    ```
+    ```python
     S = C*InvDiag(A)*B-D
     Sprec = ML(collapse(S))
     ```
   
-There is no real documentation apart from the python doc-strings, but an
+The Python API can be found [below](#api), but an
 (outdated) introduction is found in
 [doc/blockdolfin.pdf](https://github.com/blocknics/cbc.block/blob/master/doc/blockdolfin.pdf).
 Familiarity with the DOLFIN python interface is required. For more details of
@@ -47,14 +49,13 @@ Bugs, questions, contributions: Visit <http://github.com/blocknics/cbc.block>.
 > version 2.1 or later. Some files under block/iterative/ use the BSD license,
 > this is noted in the individual files.
 
-Status (master branch)
-----------------------
+## Status (master branch)
+
 ![Regression test status](https://github.com/blocknics/cbc.block/actions/workflows/test.yaml/badge.svg)
 
 [Full test coverage report](https://blocknics.github.io/cbc.block/htmlcov/)
 
-Installation
-------------
+## Installation
 
 The fenics-dolfin package is available from conda-forge, or preinstalled on
 Docker images from <https://quay.io/organization/fenicsproject>. The recipe
@@ -96,9 +97,19 @@ python -m pip install .
 
 pip install "cbc.block[haznics] @ git+https://github.com/blocknics/cbc.block"
 ````
+(API)=
+# API
+The API of `CBC-block` can be founder here:
+```{eval-rst}  
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
-Publications
-------------
+   block
+```
+
+# Publications
+
 
 1. K.-A. Mardal and J. B. Haga (2012). *Block preconditioning of systems of PDEs.* In A. Logg, K.-A. Mardal, G. N. Wells et al. (ed) *Automated Solution of Differential Equations by the Finite Element Method,* Springer. doi:10.1007/978-3-642-23099-8_35, <http://fenicsproject.org/book>
 2. A. Budisa, X. Hu, M. Kuchta, K.-A. Mardal and L. Zikatanov (2022). *HAZniCS — Software Components for Multiphysics Problems.* doi: 10.48550/ARXIV.2210.13274, <https://arxiv.org/abs/2210.13274>
