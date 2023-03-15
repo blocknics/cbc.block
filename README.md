@@ -36,7 +36,7 @@
     Sprec = ML(collapse(S))
     ```
   
-The Python API can be found [below](#api), but an
+The Python API can be found [below](#api), and an
 (outdated) introduction is found in
 [doc/blockdolfin.pdf](https://github.com/blocknics/cbc.block/blob/master/doc/blockdolfin.pdf).
 Familiarity with the DOLFIN python interface is required. For more details of
