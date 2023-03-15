@@ -22,7 +22,7 @@ concurrency:
 
 env:
   # Directory that will be published on github pages
-  PUBLISH_DIR: ./docs/_build/html
+  PUBLISH_DIR: ./_build/html
 
 # This job installs dependencies, build the book, and pushes it to `gh-pages`
 jobs:
@@ -42,7 +42,7 @@ jobs:
         shell: bash -l {0}
         run: |
           python3 -m pip install sphinx-autoapi jupyter-book
-          jupyter book build docs
+          jupyter book build .
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
