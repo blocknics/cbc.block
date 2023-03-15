@@ -97,7 +97,6 @@ python -m pip install .
 
 pip install "cbc.block[haznics] @ git+https://github.com/blocknics/cbc.block"
 ````
-(API)=
 # API
 The API of `CBC-block` can be found here:
 ```{eval-rst}  
