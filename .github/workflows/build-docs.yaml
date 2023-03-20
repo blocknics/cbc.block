@@ -1,0 +1,44 @@
+name: Build documentation
+
+# Only run this when the master branch changes
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_call:
+  
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  # Directory that will be published on github pages
+  PUBLISH_DIR: ./_build/html
+
+# This job installs dependencies, build the book, and pushes it to `gh-pages`
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          # fenics-dolfin on conda-forge starts at 3.8
+          python-version: "3.8.*"
+
+
+      - name: Build the book
+        shell: bash -l {0}
+        run: |
+          python3 -m pip install sphinx-autoapi jupyter-book
+          jupyter book build .
+
+      - name: Upload documentation as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: ${{ env.PUBLISH_DIR }}
+          if-no-files-found: error
+
+ 

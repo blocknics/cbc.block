@@ -15,3 +15,5 @@ cbc.block.egg-info/
 .coverage
 *.egg-info
 coverage.xml
+_build
+_autosummary

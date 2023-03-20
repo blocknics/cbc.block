@@ -33,8 +33,9 @@ test = [
 docs = [
     "jupyter-book", # Required to build documentation
     "jupytext", # Required to convert .py to .ipynb files
-    "ipython"
-]
+    "ipython",
+    "sphinx-autoapi"
+    ]
 
 haznics = [
     "haznics",
