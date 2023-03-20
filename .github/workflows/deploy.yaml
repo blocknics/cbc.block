@@ -65,7 +65,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-       - name: Download docs artifact
+      - name: Download docs artifact
         uses: actions/download-artifact@v3
         with:
           name: documentation
