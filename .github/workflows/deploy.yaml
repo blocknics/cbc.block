@@ -1,3 +1,5 @@
+name: Deploy webpage (and pypi on release)
+
 on:
   push:
     branches:
