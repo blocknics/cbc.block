@@ -1,9 +1,15 @@
 on:
+  # Only run this when the master branch changes, or when releasing new version
   push:
     branches:
       - master
     tags:
       - v*
+
+# Allow one concurrent deployment
+concurrency:
+  group: "deploy"
+  cancel-in-progress: true
 
 jobs:
   tests:
@@ -12,6 +18,9 @@ jobs:
       checks: write
       contents: read
       pull-requests: write
+
+  build-docs:
+    uses: ./.github/workflows/build-docs.yaml
 
   deploy-to-pypi:
     runs-on: ubuntu-latest
@@ -48,7 +57,7 @@ jobs:
   deploy-to-web:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/heads/')
-    needs: tests
+    needs: [tests, build-docs]
     timeout-minutes: 5
 
     permissions:
@@ -60,10 +69,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Download coverage report
+      - name: Download docs artifact
+        # docs artifact is uploaded by build-docs job
         uses: actions/download-artifact@v3
         with:
           name: coverage-report
+          path: "./public"
+
+      - name: Download coverage report artifact
+        # coverage artifact is uploaded by tests job
+        uses: actions/download-artifact@v3
+        with:
+          name: docs
           path: "./public/htmlcov"
 
       - name: Upload page artifact
