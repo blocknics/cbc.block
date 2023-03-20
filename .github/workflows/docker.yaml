@@ -19,8 +19,7 @@ on:
         type: string
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: cbc-block
-
+  IMAGE_NAME: ${{ github.repository }}
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
