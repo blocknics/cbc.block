@@ -102,6 +102,7 @@ class petsc_solver(petsc_base):
         self.Ad = mat(A)
 
         prefix, self.optsDB = self._merge_options(prefix=prefix, options=options, defaults=defaults)
+
         self.petsc_op = PETSc.KSP().create(V.mesh().mpi_comm() if V else None)
         self.petsc_op.setOptionsPrefix(prefix)
         if ksp_type is not None:
@@ -109,7 +110,7 @@ class petsc_solver(petsc_base):
             
         self.petsc_op.setConvergenceHistory() # Record residuals
         self.residuals = []
-        
+
         self.petsc_op.setOperators(self.Ad)
         self.petsc_op.setFromOptions()
         if precond is not None:
@@ -144,7 +145,7 @@ class petsc_solver(petsc_base):
     def iterations(self):
         return len(self.residuals)-1
 
-
+    
 class KSP(petsc_solver):
     def __init__(self, A, precond=None, prefix=None, **parameters):
         super().__init__(A, precond=precond, V=None, ksp_type=None, prefix=prefix, options=parameters,

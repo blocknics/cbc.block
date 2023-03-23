@@ -6,7 +6,7 @@ eps = np.finfo(np.float64).eps
 
 @pytest.fixture
 def blocks2x2(poisson):
-    A,b = poisson
+    A, b = poisson.A, poisson.b
     AA = block_mat([[2*A, 0],
                     [A,   3]])
     bb = block_vec([0, b])

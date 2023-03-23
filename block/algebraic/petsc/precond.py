@@ -65,7 +65,15 @@ class precond(petsc_base):
         self.A = A
         self.petsc_op = PETSc.PC().create(V.mesh().mpi_comm() if V else None)
         self.petsc_op.setOptionsPrefix(prefix)
-        self.petsc_op.setType(prectype)
+
+        try:
+            self.petsc_op.setType(prectype)
+        except PETSc.Error as e:
+            if e.ierr == 86:
+                raise ValueError(f'Unknown PETSc type "{prectype}"')
+            else:
+                raise
+
         self.petsc_op.setOperators(Ad)
         self.petsc_op.setFromOptions()
 
@@ -105,7 +113,8 @@ class precond(petsc_base):
 
 class ML(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.ML, parameters, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.ML,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              # Symmetry- and PD-preserving smoother
                              'mg_levels_ksp_type': 'chebyshev',
@@ -121,7 +130,8 @@ class ML(precond):
 class ILU(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
         supports_mpi(False, 'PETSc ILU does not work in parallel', mat(A).comm.size)
-        super().__init__(A, PETSc.PC.Type.ILU, pdes, nullspace, options=parameters, prefix=prefix)
+        super().__init__(A, PETSc.PC.Type.ILU,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix)
 
 class Cholesky(precond):
     def __init__(self, A, parameters=None, prefix=None):
@@ -129,12 +139,19 @@ class Cholesky(precond):
 
 class LU(precond):
     def __init__(self, A, parameters=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix)
+        super().__init__(A, PETSc.PC.Type.CHOLESKY,
+                         pdes=1, nullspace=None, options=parameters, prefix=prefix)
 
+class LU(precond):
+    def __init__(self, A, parameters=None, prefix=None, defaults={}):
+        super().__init__(A, PETSc.PC.Type.LU,
+                         pdes=1, nullspace=None, options=parameters, prefix=prefix,
+                         defaults=defaults)
 
 class MUMPS_LU(LU):
     def __init__(self, A, parameters=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
+        super().__init__(A,
+                         parameters=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'mumps',
                          })
@@ -142,7 +159,8 @@ class MUMPS_LU(LU):
 
 class SUPERLU_LU(LU):
     def __init__(self, A, parameters=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
+        super().__init__(A,
+                         parameters=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'superlu',
                          })
@@ -153,7 +171,8 @@ class AMG(precond):
     BoomerAMG preconditioner from the Hypre Library
     """
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.HYPRE, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.HYPRE,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              "pc_hypre_type": "boomeramg",
                              #"pc_hypre_boomeramg_cycle_type": "V", # (V,W)
@@ -196,7 +215,8 @@ class SOR(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
         options = {
             }
-        super().__init__(A, PETSc.PC.Type.SOR, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.SOR,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              "pc_sor_omega": 1,      # relaxation factor (0 < omega < 2, 1 is Gauss-Seidel)
                              "pc_sor_its": 1,        # number of inner SOR iterations
@@ -213,7 +233,8 @@ class SOR(precond):
 
 class Elasticity(precond):
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.GAMG, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.GAMG,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              'pc_mg_cycle_type': 'w',
                              'pc_mg_multiplicative_cycles': 2
@@ -225,7 +246,8 @@ class ASM(precond):
     Defaults (or should default, not tested) to one block per process.
     """
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.ASM, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.ASM,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              #"pc_asm_blocks":  1,             # Number of subdomains
                              "pc_asm_overlap": 1,             # Number of grid points overlap
@@ -240,7 +262,8 @@ class Jacobi(precond):
     Actually this is only a diagonal scaling preconditioner; no support for relaxation or multiple iterations.
     """
     def __init__(self, A, parameters=None, pdes=1, nullspace=None, prefix=None):
-        super().__init__(A, PETSc.PC.Type.JACOBI, pdes, nullspace, options=parameters, prefix=prefix,
+        super().__init__(A, PETSc.PC.Type.JACOBI,
+                         pdes=pdes, nullspace=nullspace, options=parameters, prefix=prefix,
                          defaults={
                              #"pc_jacobi_rowmax": "",  # Use row maximums for diagonal
                              #"pc_jacobi_rowsum": "",  # Use row sums for diagonal
@@ -266,7 +289,7 @@ class HypreAMS(precond):
 
     where alpha > 0 and beta >= 0.
     '''
-    def __init__(self, A, V, ams_zero_beta_poisson=False):
+    def __init__(self, A, V, ams_zero_beta_poisson=False, prefix=None):
         mesh = V.mesh()
         if mesh.geometry().dim() == 2:
             assert V.ufl_element().family() in ('Raviart-Thomas', 'Nedelec 1st kind H(curl)')
@@ -279,7 +302,8 @@ class HypreAMS(precond):
         Q = df.FunctionSpace(mesh, 'CG', 1)
         G = df.DiscreteOperators.build_gradient(V, Q)
 
-        super().__init__(A, PETSc.PC.Type.HYPRE, V=V, pdes=None, nullspace=None, options=None, prefix=None,
+        super().__init__(A, PETSc.PC.Type.HYPRE, V=V,
+                         pdes=None, nullspace=None, options=None, prefix=prefix,
                          defaults={
                              'pc_hypre_type': 'ams',
                          })
@@ -356,7 +380,7 @@ class HypreADS(precond):
 
         return Cmat
 
-    def __init__(self, A, V):
+    def __init__(self, A, V, prefix=None):
         assert V.mesh().geometry().dim() == 3
         assert V.ufl_element().family() == 'Raviart-Thomas'
         assert V.ufl_element().degree() == 1
@@ -368,7 +392,8 @@ class HypreADS(precond):
         G = HypreADS.discrete_gradient(mesh)
         xyz = HypreADS.coordinates(mesh)
 
-        super().__init__(A, PETSc.PC.Type.HYPRE, V=V, pdes=None, nullspace=None, options=None, prefix=None,
+        super().__init__(A, PETSc.PC.Type.HYPRE, V=V,
+                         pdes=None, nullspace=None, options=None, prefix=prefix,
                          defaults={
                              'pc_hypre_type': 'ads',
                          })
