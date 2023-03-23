@@ -1,7 +1,7 @@
 from block import block_mat, block_vec, supports_mpi
 from block.block_base import block_base, block_container
 from block.object_pool import vec_pool
-from dolfin import GenericVector, Matrix, PETScVector
+from dolfin import GenericVector, Matrix, PETScVector, PETScMatrix
 import numpy as np
 from petsc4py import PETSc
 from .precond import petsc_base, mat as single_mat, vec as single_vec
@@ -31,7 +31,7 @@ def mat(A, _sizes=None):
         Ad.setPythonContext(petsc_py_wrapper(A))
         Ad.setUp()
         return Ad
-    elif isinstance(A, Matrix):
+    elif isinstance(A, (PETScMatrix, Matrix)):
         return single_mat(A)
     else:
         raise TypeError(str(type(A)))
@@ -102,11 +102,14 @@ class petsc_solver(petsc_base):
         self.Ad = mat(A)
 
         prefix, self.optsDB = self._merge_options(prefix=prefix, options=options, defaults=defaults)
-
         self.petsc_op = PETSc.KSP().create(V.mesh().mpi_comm() if V else None)
         self.petsc_op.setOptionsPrefix(prefix)
         if ksp_type is not None:
             self.petsc_op.setType(ksp_type)
+            
+        self.petsc_op.setConvergenceHistory() # Record residuals
+        self.residuals = []
+        
         self.petsc_op.setOperators(self.Ad)
         self.petsc_op.setFromOptions()
         if precond is not None:
@@ -121,6 +124,9 @@ class petsc_solver(petsc_base):
         self.petsc_op.setUp()
         x = self.Ad.createVecLeft()
         self.petsc_op.solve(vec(b), x)
+
+        self.residuals = self.petsc_op.getConvergenceHistory()
+        
         return Vec(x, self.A)
 
     @vec_pool
@@ -133,6 +139,11 @@ class petsc_solver(petsc_base):
         else:
             raise ValueError('dim must be 0 or 1')
         return PETScVector(m)
+
+    @property
+    def iterations(self):
+        return len(self.residuals)-1
+
 
 class KSP(petsc_solver):
     def __init__(self, A, precond=None, prefix=None, **parameters):

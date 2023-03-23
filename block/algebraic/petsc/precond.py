@@ -124,16 +124,16 @@ class ILU(precond):
         super().__init__(A, PETSc.PC.Type.ILU, pdes, nullspace, options=parameters, prefix=prefix)
 
 class Cholesky(precond):
-    def __init__(self, A, parameters=None):
+    def __init__(self, A, parameters=None, prefix=None):
         super().__init__(A, PETSc.PC.Type.CHOLESKY, 1, None, options=parameters, prefix=prefix)
 
 class LU(precond):
-    def __init__(self, A, parameters=None):
+    def __init__(self, A, parameters=None, prefix=None):
         super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix)
 
 
 class MUMPS_LU(LU):
-    def __init__(self, A, parameters=None):
+    def __init__(self, A, parameters=None, prefix=None):
         super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'mumps',
@@ -141,7 +141,7 @@ class MUMPS_LU(LU):
 
 
 class SUPERLU_LU(LU):
-    def __init__(self, A, parameters=None):
+    def __init__(self, A, parameters=None, prefix=None):
         super().__init__(A, PETSc.PC.Type.LU, 1, None, options=parameters, prefix=prefix,
                          defaults={
                              'pc_factor_mat_solver_package': 'superlu',
@@ -293,7 +293,9 @@ class HypreAMS(precond):
         # NOTE: signal that we don't have lower order term
         ams_zero_beta_poisson and self.petsc_op.setHYPRESetBetaPoissonMatrix(None)
 
+        self.setup_time = -1
 
+        
 class HypreADS(precond):
     '''
     AMG auxiliary space preconditioner for H(div) problems in 3d. The bilinear 
