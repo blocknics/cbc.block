@@ -111,6 +111,8 @@ class petsc_solver(petsc_base):
         self.petsc_op.setConvergenceHistory() # Record residuals
         self.residuals = []
 
+        self.petsc_op.setComputeEigenvalues(True)
+
         self.petsc_op.setOperators(self.Ad)
         self.petsc_op.setFromOptions()
         if precond is not None:
@@ -145,6 +147,15 @@ class petsc_solver(petsc_base):
     def iterations(self):
         return len(self.residuals)-1
 
+    def eigenvalue_estimates(self):
+        if self.petsc_op.getComputeEigenvalues():
+            return self.petsc_op.computeEigenvalues()
+        print(self.petsc_op.getComputeSingularValues())
+        exit()
+        if self.petsc_op.getComputeSingularValues():
+            return self.petsc_op.computeExtremeSingularValues()
+        
+        return np.array([])
     
 class KSP(petsc_solver):
     def __init__(self, A, precond=None, prefix=None, **parameters):
