@@ -19,7 +19,8 @@ def mat(A, _sizes=None):
         # a vector to find the size is wasteful but easy
         row_sz = [(v.local_size(), v.size()) for v in A.create_vec(dim=1)]
         col_sz = [(v.local_size(), v.size()) for v in A.create_vec(dim=0)]
-        m = PETSc.Mat().createNest([[mat(m, (row_sz[r],col_sz[c])) for (c,m) in enumerate(row)]
+
+        m = PETSc.Mat().createNest([[mat(m, (row_sz[r], col_sz[c])) for (c,m) in enumerate(row)]
                                     for (r,row) in enumerate(A.blocks)])
         if USE_VECNEST:
             m.setVecType(PETSc.Vec.Type.NEST)
@@ -27,6 +28,10 @@ def mat(A, _sizes=None):
     elif isinstance(A, block_base) or np.isscalar(A):
         if not _sizes:
             raise ValueError('Cannot create unsized PETSc matrix')
+
+        if A == 0:
+            return None
+        
         Ad = PETSc.Mat().createPython(_sizes)
         Ad.setPythonContext(petsc_py_wrapper(A))
         Ad.setUp()
@@ -150,8 +155,7 @@ class petsc_solver(petsc_base):
     def eigenvalue_estimates(self):
         if self.petsc_op.getComputeEigenvalues():
             return self.petsc_op.computeEigenvalues()
-        print(self.petsc_op.getComputeSingularValues())
-        exit()
+
         if self.petsc_op.getComputeSingularValues():
             return self.petsc_op.computeExtremeSingularValues()
         
