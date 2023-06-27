@@ -411,10 +411,11 @@ class RA(Precond):
         alpha, beta = parameters['coefs']
         s_power, t_power = parameters['pwrs']
 
+        ra_tol = parameters.get('AAA_tol', 1E-6)
         # set RA preconditioner #
         precond = haznics.create_precond_ra(A_ptr, M_ptr, s_power, t_power,
                                             alpha, beta, scaling_a, scaling_m,
-                                            ra_tol=1e-6, amgparam=amgparam)
+                                            ra_tol=ra_tol, amgparam=amgparam)
 
         # if fail, setup returns null
         if not precond:

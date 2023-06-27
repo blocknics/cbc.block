@@ -71,19 +71,19 @@ def Vec(v, creator):
             else:
                 return PETScVector(v)
         else:
-            if isinstance(creator, block_container):
-                ret = creator.create_vec(dim=1)
+            ret = creator.create_vec(dim=1)
+            if isinstance(ret, block_vec):
                 arr = v.getArray()
                 i0 = 0
                 for vv in ret:
                     vv.set_local(arr[i0:i0+len(vv)])
                     i0 += len(vv)
                 return ret
-            else:
-                return PETScVector(v)
+            return PETScVector(v)
     else:
         raise TypeError(str(type(v)))
 
+    
 class petsc_py_wrapper:
     # Python context for cbc.block actions (PC.Type.PYTHON, Mat.Type.PYTHON)
     def __init__(self, A):
@@ -99,6 +99,7 @@ class petsc_py_wrapper:
     def setUp(self, pc):
         pass
 
+    
 class petsc_solver(petsc_base):
     def __init__(self, A, precond, V, ksp_type, prefix, options, defaults={}):
         supports_mpi(False, 'PETSc solver interface currently does not work in parallel')
