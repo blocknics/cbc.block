@@ -58,7 +58,7 @@ def vec(v):
                 arr[i0:i0+len(arr2)] = arr2
                 i0 += len(arr2)
             return vs
-    elif isinstance(v, GenericVector):
+    elif isinstance(v, (PETScVector, GenericVector)):
         return single_vec(v)
     else:
         raise TypeError(str(type(v)))
@@ -76,7 +76,9 @@ def Vec(v, creator):
                 arr = v.getArray()
                 i0 = 0
                 for vv in ret:
-                    vv.set_local(arr[i0:i0+len(vv)])
+                    # vv.set_local(arr[i0:i0+len(vv)])
+                    vv *= 0.
+                    vv.axpy(1., PETScVector(PETSc.Vec().createWithArray(arr[i0:i0+len(vv)])))
                     i0 += len(vv)
                 return ret
             else:
@@ -91,7 +93,9 @@ class petsc_py_wrapper:
 
     def mult(self, mat, x, y):
         new_y = vec(self.A * Vec(x, self.A))
-        y.aypx(0, new_y)
+        # y.aypx(0, new_y)
+        y *= 0
+        y += new_y
 
     def apply(self, pc, x, y):
         return self.mult(None, x, y)

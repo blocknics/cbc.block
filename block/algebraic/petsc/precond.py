@@ -66,16 +66,17 @@ class precond(petsc_base):
         self.petsc_op = PETSc.PC().create(V.mesh().mpi_comm() if V else None)
         self.petsc_op.setOptionsPrefix(prefix)
 
-        try:
-            self.petsc_op.setType(prectype)
-        except PETSc.Error as e:
-            if e.ierr == 86:
-                raise ValueError(f'Unknown PETSc type "{prectype}"')
-            else:
-                raise
+        if prectype:
+            try:
+                self.petsc_op.setType(prectype)
+            except PETSc.Error as e:
+                if e.ierr == 86:
+                    raise ValueError(f'Unknown PETSc type "{prectype}"')
+                else:
+                    raise
 
-        self.petsc_op.setOperators(Ad)
-        self.petsc_op.setFromOptions()
+            self.petsc_op.setOperators(Ad)
+            self.petsc_op.setFromOptions()
 
         self.setup_time = -1.
 
@@ -94,8 +95,8 @@ class precond(petsc_base):
 
             self.setup_time = setup_time
             
-        from dolfin import GenericVector
-        if not isinstance(b, GenericVector):
+        from dolfin import GenericVector, PETScVector
+        if not isinstance(b, (PETScVector, GenericVector)):
             return NotImplemented
         x = self.A.create_vec(dim=1)
         if len(x) != len(b):
@@ -384,7 +385,6 @@ class HypreADS(precond):
         assert V.mesh().geometry().dim() == 3
         assert V.ufl_element().family() == 'Raviart-Thomas'
         assert V.ufl_element().degree() == 1
-
         supports_mpi(False, 'ADS curl matrix needs to be fixed for parallel', mat(A).comm.size) # FIXME
 
         mesh = V.mesh()
@@ -392,12 +392,14 @@ class HypreADS(precond):
         G = HypreADS.discrete_gradient(mesh)
         xyz = HypreADS.coordinates(mesh)
 
-        super().__init__(A, PETSc.PC.Type.HYPRE, V=V,
-                         pdes=None, nullspace=None, options=None, prefix=prefix,
-                         defaults={
-                             'pc_hypre_type': 'ads',
-                         })
+        super().__init__(A, '', V=V,
+                         pdes=None, nullspace=None, options=None, prefix=prefix)
+        self.petsc_op.setType('hypre')        
+        self.petsc_op.setHYPREType('ads')
+        self.petsc_op.setOperators(mat(A))
         # Attach auxiliary operators
         self.petsc_op.setHYPREDiscreteGradient(G)
         self.petsc_op.setHYPREDiscreteCurl(G)
         self.petsc_op.setCoordinates(xyz)
+        self.petsc_op.setUp()
+        

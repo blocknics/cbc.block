@@ -43,8 +43,12 @@ class block_vec(block_container):
                     except Exception:
                         pass
             if not isinstance(self[i], GenericVector):
+                from IPython import embed
+                embed()
+                
                 raise ValueError(
                     f"Can't allocate vector - no usable template for block {i}.\n"
+                    f'{self[i]}'
                     "Consider calling something like bb.allocate([V, Q]) to initialise the block_vec."
                 )
             self[i].zero()
