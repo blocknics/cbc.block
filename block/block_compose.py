@@ -26,6 +26,8 @@ w=block_add.__mul__(M, v)
 """
 
 from .block_base import block_base
+from dolfin import Vector
+
 
 class block_mul(block_base):
     def __init__(self, A, B):
@@ -65,7 +67,6 @@ class block_mul(block_base):
         # just try the next operator in the chain. This is not completely safe,
         # in particular it may produce a vector of the wrong size if non-square
         # numpy matrices are involved.
-
         if dim==0:
             for op in self.chain:
                 try:
@@ -168,7 +169,16 @@ class block_transpose(block_base):
         return self.A.__mul__(x)
 
     def create_vec(self, dim=1):
-        return self.A.create_vec(1-dim)
+        try:
+            return self.A.create_vec(1-dim)
+        except:
+            try:
+                sizes = (self.A.size(0), self.A.size(1))
+                vec = Vector(self.A.mpi_comm(), sizes[1-dim])
+                return vec
+            except:
+                return None
+                
 
     def block_collapse(self):
         """See block_transform.block_collapse."""

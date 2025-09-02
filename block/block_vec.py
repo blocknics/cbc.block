@@ -42,10 +42,8 @@ class block_vec(block_container):
                         break
                     except Exception:
                         pass
+            # Desperate attempt
             if not isinstance(self[i], GenericVector):
-                from IPython import embed
-                embed()
-                
                 raise ValueError(
                     f"Can't allocate vector - no usable template for block {i}.\n"
                     f'{self[i]}'
