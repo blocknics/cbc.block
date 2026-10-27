@@ -22,9 +22,10 @@ def mat(A, _sizes=None):
 
         m = PETSc.Mat().createNest([[mat(m, (row_sz[r], col_sz[c])) for (c,m) in enumerate(row)]
                                     for (r,row) in enumerate(A.blocks)])
+
         if USE_VECNEST:
             m.setVecType(PETSc.Vec.Type.NEST)
-            
+        
         return m
     
     elif isinstance(A, (PETScMatrix, Matrix)):
@@ -43,7 +44,7 @@ def mat(A, _sizes=None):
         return Ad
     else:
         try:
-            row_vec, col_vec = A.create_vec(dim=1), A.create_vec(dim=0)
+            row_vec, col_vec = A.create_vec(dim=0), A.create_vec(dim=1)
             _sizes = (row_vec.local_size(), col_vec.local_size())
             
             Ad = PETSc.Mat().createPython(_sizes)
@@ -168,7 +169,7 @@ class petsc_solver(petsc_base):
             else:
                 y = self.initial_guess                    
             x.axpy(1, y)
-                
+
         self.petsc_op.solve(vec(b), x)
 
         self.residuals = self.petsc_op.getConvergenceHistory()
